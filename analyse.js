@@ -10,10 +10,18 @@ export default async function handler(req, res) {
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file — please upload a PDF drawing' });
 
-  const prompt = `Extract steel members from this structural drawing. Be concise.
-Return ONLY this JSON, no other text, no markdown:
-{"hotRolled":[{"dwg":"","type":"","section":"","length":0,"qty":0,"kgm":0,"m2m":0}],"coldRolled":[{"dwg":"","type":"","section":"","length":0,"qty":0,"kgm":0}]}
-Rules: type=Column/Beam/Rafter/Brace/Purlin/Rail, section=UK code e.g.203x203x46UC, length in mm, kgm from tables, omit notes field entirely.`;
+  const prompt = `Extract all steel members from this structural drawing.
+Return ONLY a CSV table with these exact columns, no headers, no explanation:
+HOT,dwg,type,section,length_mm,qty,kgm,m2m
+COLD,dwg,type,section,length_mm,qty,kgm
+
+One member per line. Use HOT for hot rolled steel (UC/UB/RHS/CHS/angles) and COLD for cold rolled (Z purlins/C rails/Metsec).
+Example:
+HOT,DWG01,Column,203x203x46UC,4200,4,46.1,1.821
+HOT,DWG01,Beam,457x191x82UB,6000,8,82.1,2.166
+COLD,DWG01,Purlin,Z200-19,6000,24,3.2
+
+Keep section names short. Use 0 for unknown values.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -50,45 +58,50 @@ Rules: type=Column/Beam/Rafter/Brace/Purlin/Rail, section=UK code e.g.203x203x46
 
     if (data.type === 'error') return res.status(502).json({ error: data.error?.message || 'AI error' });
 
-    const stopReason = data.stop_reason || '';
     const raw = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
-
     if (!raw) return res.status(502).json({ error: 'No response from AI' });
 
-    let jsonStr = raw;
-    if (stopReason === 'max_tokens' || !raw.endsWith('}')) {
-      let openBraces = 0, openBrackets = 0;
-      const lastComplete = raw.lastIndexOf('}');
-      let repair = lastComplete > 0 ? raw.slice(0, lastComplete + 1) : raw;
-      for (const ch of repair) {
-        if (ch === '{') openBraces++;
-        else if (ch === '}') openBraces--;
-        else if (ch === '[') openBrackets++;
-        else if (ch === ']') openBrackets--;
+    const hotRolled = [];
+    const coldRolled = [];
+
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l.startsWith('HOT,') || l.startsWith('COLD,'));
+
+    for (const line of lines) {
+      const parts = line.split(',').map(p => p.trim());
+      const type = parts[0];
+
+      if (type === 'HOT' && parts.length >= 7) {
+        hotRolled.push({
+          dwg: parts[1] || '',
+          type: parts[2] || '',
+          section: parts[3] || '',
+          length: parseFloat(parts[4]) || 0,
+          qty: parseFloat(parts[5]) || 0,
+          kgm: parseFloat(parts[6]) || 0,
+          m2m: parseFloat(parts[7]) || 0,
+          notes: ''
+        });
+      } else if (type === 'COLD' && parts.length >= 6) {
+        coldRolled.push({
+          dwg: parts[1] || '',
+          type: parts[2] || '',
+          section: parts[3] || '',
+          length: parseFloat(parts[4]) || 0,
+          qty: parseFloat(parts[5]) || 0,
+          kgm: parseFloat(parts[6]) || 0,
+          notes: ''
+        });
       }
-      for (let i = 0; i < openBrackets; i++) repair += ']';
-      for (let i = 0; i < openBraces; i++) repair += '}';
-      jsonStr = repair;
     }
 
-    let parsed;
-    try {
-      const first = jsonStr.indexOf('{');
-      const last = jsonStr.lastIndexOf('}');
-      if (first === -1 || last === -1) throw new Error('No JSON');
-      parsed = JSON.parse(jsonStr.slice(first, last + 1));
-    } catch(e) {
-      return res.status(502).json({ error: 'Could not parse response. Drawing may be too complex — try a simpler drawing first.' });
+    if (hotRolled.length === 0 && coldRolled.length === 0) {
+      return res.status(502).json({ error: 'No steel members found. Please check the PDF contains a structural drawing with member sizes.' });
     }
 
-    return res.status(200).json({
-      hotRolled: Array.isArray(parsed.hotRolled) ? parsed.hotRolled : [],
-      coldRolled: Array.isArray(parsed.coldRolled) ? parsed.coldRolled : []
-    });
+    return res.status(200).json({ hotRolled, coldRolled });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 }
-
 
