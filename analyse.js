@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file — please upload a PDF drawing' });
 
+  // Ask for CSV format instead of JSON — much more compact, won't get cut off
   const prompt = `Extract all steel members from this structural drawing.
 Return ONLY a CSV table with these exact columns, no headers, no explanation:
 HOT,dwg,type,section,length_mm,qty,kgm,m2m
@@ -61,6 +62,7 @@ Keep section names short. Use 0 for unknown values.`;
     const raw = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
     if (!raw) return res.status(502).json({ error: 'No response from AI' });
 
+    // Parse the CSV response into arrays
     const hotRolled = [];
     const coldRolled = [];
 
@@ -68,7 +70,7 @@ Keep section names short. Use 0 for unknown values.`;
 
     for (const line of lines) {
       const parts = line.split(',').map(p => p.trim());
-      const type = parts[0];
+      const type = parts[0]; // HOT or COLD
 
       if (type === 'HOT' && parts.length >= 7) {
         hotRolled.push({
@@ -95,7 +97,7 @@ Keep section names short. Use 0 for unknown values.`;
     }
 
     if (hotRolled.length === 0 && coldRolled.length === 0) {
-      return res.status(502).json({ error: 'No steel members found. Please check the PDF contains a structural drawing with member sizes.' });
+      return res.status(502).json({ error: 'No steel members found in drawing. Please check the PDF contains a structural drawing with member sizes.' });
     }
 
     return res.status(200).json({ hotRolled, coldRolled });
@@ -104,4 +106,3 @@ Keep section names short. Use 0 for unknown values.`;
     return res.status(500).json({ error: err.message });
   }
 }
-

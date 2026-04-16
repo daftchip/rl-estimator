@@ -380,7 +380,6 @@ async function processFile(file){
     if(!b64.startsWith('JVBERi'))throw new Error('Not a valid PDF file.');
     setStep(1,'done');
     setStep(2,'active');
-    // Calls our own server endpoint — no CORS issues, no API key needed in browser
     const resp=await fetch('/api/analyse',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -388,7 +387,11 @@ async function processFile(file){
     });
     setStep(2,'done');
     setStep(3,'active');
-    const data=await resp.json();
+    const rawText=await resp.text();
+    if(!rawText||rawText.trim()==='')throw new Error('Empty response — please try again.');
+    let data;
+    try{data=JSON.parse(rawText);}
+    catch(e){throw new Error('Server error: '+rawText.slice(0,300));}
     if(!resp.ok||data.error)throw new Error(data.error||'Server error '+resp.status);
     setStep(3,'done');
     setStep(4,'active');
