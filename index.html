@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="R&L Est.">
+<title>R&L Estimator</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1a2332;--bg2:#243044;--bg3:#2e3f5c;
+  --accent:#f0a500;--hot:#e05c2a;--cold:#2a7ae0;
+  --text:#e8edf5;--dim:#8a9ab5;--border:#334466;
+  --inp:#0f1825;--green:#2ecc71;--red:#e74c3c;
+  --crimson:#c0182e;--gold:#c8961a;
+  --safe:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;overflow:hidden;}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+header{background:#fff;border-bottom:3px solid var(--crimson);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:58px;}
+.brand-logo{display:flex;flex-direction:column;line-height:1;}
+.brand-rl{font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:30px;color:var(--crimson);letter-spacing:1px;}
+.brand-sub{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;color:var(--gold);letter-spacing:3.5px;text-transform:uppercase;margin-top:1px;}
+.proj-input{background:#f5f0ec;border:1px solid #ddd;color:#333;font-family:'Barlow',sans-serif;font-size:12px;padding:5px 8px;border-radius:4px;width:120px;text-align:center;}
+.proj-input:focus{outline:none;border-color:var(--crimson);}
+.hdr-btn{background:var(--crimson);color:#fff;border:none;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0;}
+.sum-card{background:var(--bg2);padding:6px 8px;text-align:center;}
+.sum-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;}
+.sum-val{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;}
+.sum-val.or{color:var(--hot);}.sum-val.bl{color:var(--cold);}.sum-val.gr{color:var(--green);}
+.tabs{display:flex;background:var(--inp);border-bottom:2px solid var(--border);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.8px;padding:11px 14px;cursor:pointer;text-transform:uppercase;color:var(--dim);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;flex-shrink:0;}
+.tab.a-pdf{color:var(--accent);border-color:var(--accent);}
+.tab.a-rates{color:#8b5cf6;border-color:#8b5cf6;}
+.tab.a-hot{color:var(--hot);border-color:var(--hot);}
+.tab.a-cold{color:var(--cold);border-color:var(--cold);}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;}
+.hidden{display:none!important;}
+.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.badge{font-size:9px;padding:2px 6px;border-radius:2px;font-weight:700;letter-spacing:.5px;}
+.badge-hot{background:var(--hot);color:#fff;}.badge-cold{background:var(--cold);color:#fff;}.badge-rates{background:#8b5cf6;color:#fff;}
+.row-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+.row-card-header{background:var(--inp);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.row-card-body{padding:8px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.row-card-total{padding:6px 10px;background:rgba(46,204,113,.08);border-top:1px solid var(--border);text-align:right;}
+.field-group{display:flex;flex-direction:column;gap:2px;}
+.field-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;}
+.field-val{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--accent);}
+input[type=text],input[type=number]{background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;padding:7px 8px;border-radius:4px;width:100%;-webkit-appearance:none;}
+input[type=text]:focus,input[type=number]:focus{outline:none;border-color:var(--accent);}
+input[type=number]{text-align:right;}
+.total-price{color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;}
+.btn-add{background:var(--bg3);color:var(--accent);border:1px dashed var(--accent);font-size:12px;padding:10px;width:100%;margin-top:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:4px;}
+.btn-danger{background:var(--red);color:#fff;font-size:11px;padding:5px 9px;border-radius:3px;border:none;cursor:pointer;flex-shrink:0;}
+.btn-apply{background:#1a3a1a;color:var(--green);border:1px solid var(--green);font-size:12px;padding:10px;border-radius:4px;width:100%;margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+.btn-ghost{background:transparent;color:var(--dim);border:1px solid var(--border);font-size:11px;padding:8px;border-radius:4px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;width:100%;margin-top:6px;}
+.grand-total{background:var(--inp);border:2px solid var(--accent);border-radius:6px;padding:12px;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.gt-item{text-align:center;}
+.gt-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.gt-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--accent);}
+.gt-val.gr{color:var(--green);font-size:24px;}.gt-val.bl{color:var(--cold);}
+.rate-card{background:var(--inp);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden;}
+.rate-hdr{background:var(--bg2);padding:8px 12px;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.rate-hdr.hot{color:var(--hot);}.rate-hdr.cold{color:var(--cold);}.rate-hdr.paint{color:var(--accent);}
+.rate-row{display:flex;align-items:center;padding:7px 12px;border-bottom:1px solid rgba(51,68,102,.4);gap:8px;}
+.rate-row:last-child{border-bottom:none;}
+.rate-name{flex:1;font-size:11px;color:var(--dim);}
+.rate-unit{font-size:10px;color:var(--dim);width:38px;text-align:center;flex-shrink:0;}
+.rate-inp{background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;padding:5px 8px;border-radius:3px;width:80px;text-align:right;flex-shrink:0;-webkit-appearance:none;}
+.rate-inp:focus{outline:none;border-color:#8b5cf6;}
+.info-box{background:var(--bg2);border-left:3px solid var(--accent);padding:10px 12px;font-size:11px;color:var(--dim);border-radius:0 4px 4px 0;margin-top:10px;line-height:1.6;}
+.info-box strong{color:var(--accent);}
+.content-pad{height:calc(20px + var(--safe));}
+.drop-zone{border:2px dashed var(--accent);border-radius:8px;background:var(--inp);padding:28px 16px;text-align:center;cursor:pointer;position:relative;}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.prog-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--accent);}
+.step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);padding:5px 8px;border-radius:4px;margin-bottom:3px;}
+.step.done{color:var(--green);background:rgba(46,204,113,.08);}
+.step.active{color:var(--text);background:rgba(240,165,0,.08);}
+.result-banner{padding:12px;border-radius:6px;margin-top:10px;display:none;font-size:13px;gap:10px;align-items:flex-start;}
+.result-banner.show{display:flex;}
+.result-banner.success{background:#1a3a2a;border:1px solid var(--green);color:var(--green);}
+.result-banner.error{background:#3a1a1a;border:1px solid var(--red);color:var(--red);}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="brand-logo">
+    <span class="brand-rl">R&amp;L</span>
+    <span class="brand-sub">Estimator</span>
+  </div>
+  <input class="proj-input" type="text" id="projName" placeholder="Project name...">
+  <button class="hdr-btn" onclick="exportCSV()">⬇ CSV</button>
+</header>
+<div class="summary">
+  <div class="sum-card"><div class="sum-label">Hot Rolled T</div><div class="sum-val or" id="s-hr-tns">0.000</div></div>
+  <div class="sum-card"><div class="sum-label">Cold Rolled m</div><div class="sum-val bl" id="s-cr-m">0.00</div></div>
+  <div class="sum-card"><div class="sum-label">Total</div><div class="sum-val gr" id="s-total">£0</div></div>
+</div>
+<div class="tabs">
+  <div class="tab a-pdf" id="tab-pdf" onclick="switchTab('pdf')">📄 Drawing</div>
+  <div class="tab" id="tab-rates" onclick="switchTab('rates')">💷 Rates</div>
+  <div class="tab" id="tab-hot" onclick="switchTab('hot')">🔥 Hot Rolled</div>
+  <div class="tab" id="tab-cold" onclick="switchTab('cold')">❄ Cold Rolled</div>
+</div>
+<div class="content">
+
+  <div id="panel-pdf">
+    <div class="drop-zone">
+      <input type="file" id="pdfInput" accept=".pdf,application/pdf" onchange="handleFile(event)">
+      <span style="font-size:44px;display:block;margin-bottom:10px">📐</span>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;color:var(--accent);margin-bottom:5px">TAP TO UPLOAD DRAWING</div>
+      <div style="color:var(--dim);font-size:12px;line-height:1.6">Structural PDF — AI extracts all members automatically</div>
+    </div>
+    <div id="progBox" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px;display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="spinner" id="spinner"></div>
+        <div class="prog-title" id="progTitle">Reading…</div>
+      </div>
+      <div class="step" id="s1"><span>⏳</span> Reading PDF file</div>
+      <div class="step" id="s2"><span>⏳</span> Sending to AI server</div>
+      <div class="step" id="s3"><span>⏳</span> Identifying steel members</div>
+      <div class="step" id="s4"><span>⏳</span> Extracting quantities &amp; sections</div>
+      <div class="step" id="s5"><span>⏳</span> Populating take-off sheets</div>
+    </div>
+    <div class="result-banner" id="resultBanner">
+      <span id="resultIcon" style="font-size:22px;flex-shrink:0"></span>
+      <div id="resultText"></div>
+    </div>
+    <div class="info-box">
+      <strong>Reads:</strong> GA drawings, framing plans, elevations, member schedules. Finds UC, UB, RHS, CHS, Z &amp; C purlins, angles. Edit rows after import if needed.
+    </div>
+    <div class="content-pad"></div>
+  </div>
+
+  <div id="panel-rates" class="hidden">
+    <div class="sec-title">Rates Library <span class="badge badge-rates">YOUR RATES</span></div>
+    <div class="rate-card">
+      <div class="rate-hdr hot">🔥 Hot Rolled Steel</div>
+      <div class="rate-row"><span class="rate-name">UC Columns (S275)</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_uc_s275" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">UC Columns (S355)</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_uc_s355" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">UB Beams / Rafters (S275)</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_ub_s275" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">UB Beams / Rafters (S355)</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_ub_s355" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">RHS / SHS</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_rhs" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">CHS</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_chs" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Angles / Plates</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_angles" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">General (default)</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_hr_default" placeholder="0"></div>
+    </div>
+    <div class="rate-card">
+      <div class="rate-hdr hot">⚙ Galvanising &amp; Erection</div>
+      <div class="rate-row"><span class="rate-name">Galv — Light sections</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_galv_light" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Galv — Heavy sections</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_galv_heavy" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Galv — General</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_galv_default" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Erection</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_erection" placeholder="0"></div>
+    </div>
+    <div class="rate-card">
+      <div class="rate-hdr paint">🖌 Painting &amp; Coatings</div>
+      <div class="rate-row"><span class="rate-name">Blast &amp; 1 Coat Primer</span><span class="rate-unit">£/m²</span><input class="rate-inp" type="number" id="r_blast_prime" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Full System (3 coats)</span><span class="rate-unit">£/m²</span><input class="rate-inp" type="number" id="r_paint_3coat" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Intumescent 30 min</span><span class="rate-unit">£/m²</span><input class="rate-inp" type="number" id="r_intumescent_30" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">General Paint</span><span class="rate-unit">£/m²</span><input class="rate-inp" type="number" id="r_paint_default" placeholder="0"></div>
+    </div>
+    <div class="rate-card">
+      <div class="rate-hdr cold">❄ Cold Rolled (Metsec)</div>
+      <div class="rate-row"><span class="rate-name">Z Purlins Light (Z140–170)</span><span class="rate-unit">£/m</span><input class="rate-inp" type="number" id="r_zpurlin_light" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Z Purlins Med (Z200–242)</span><span class="rate-unit">£/m</span><input class="rate-inp" type="number" id="r_zpurlin_med" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Z Purlins Heavy (Z262+)</span><span class="rate-unit">£/m</span><input class="rate-inp" type="number" id="r_zpurlin_heavy" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">C Side Rails Light</span><span class="rate-unit">£/m</span><input class="rate-inp" type="number" id="r_crail_light" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">C Side Rails Med</span><span class="rate-unit">£/m</span><input class="rate-inp" type="number" id="r_crail_med" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Eaves Beam / Apex</span><span class="rate-unit">£/m</span><input class="rate-inp" type="number" id="r_eaves" placeholder="0"></div>
+      <div class="rate-row"><span class="rate-name">Cold Rolled General</span><span class="rate-unit">£/m</span><input class="rate-inp" type="number" id="r_cr_default" placeholder="0"></div>
+    </div>
+    <button class="btn-apply" onclick="applyRates()">✔ Apply All Rates to Take-Off</button>
+    <button class="btn-ghost" onclick="resetRates()">↺ Reset All Rates</button>
+    <div class="content-pad"></div>
+  </div>
+
+  <div id="panel-hot" class="hidden">
+    <div class="sec-title">Hot Rolled Steel <span class="badge badge-hot">UC · UB · RHS · CHS</span></div>
+    <div id="hot-rows"></div>
+    <button class="btn-add" onclick="addRow('hot')">+ Add Member</button>
+    <div class="grand-total">
+      <div class="gt-item"><div class="gt-label">Total Kg</div><div class="gt-val or" id="tot-hr-kg">0</div></div>
+      <div class="gt-item"><div class="gt-label">Tonnes</div><div class="gt-val or" id="tot-hr-tns">0.000</div></div>
+      <div class="gt-item"><div class="gt-label">Surface m²</div><div class="gt-val or" id="tot-hr-sa">0.00</div></div>
+      <div class="gt-item"><div class="gt-label">Total £</div><div class="gt-val gr" id="tot-hr-total">£0.00</div></div>
+    </div>
+    <div class="content-pad"></div>
+  </div>
+
+  <div id="panel-cold" class="hidden">
+    <div class="sec-title">Cold Rolled — Metsec <span class="badge badge-cold">PURLINS · RAILS</span></div>
+    <div id="cold-rows"></div>
+    <button class="btn-add" onclick="addRow('cold')">+ Add Member</button>
+    <div class="grand-total">
+      <div class="gt-item"><div class="gt-label">Total Metres</div><div class="gt-val bl" id="tot-cr-m">0.00</div></div>
+      <div class="gt-item"><div class="gt-label">Weight Kg</div><div class="gt-val bl" id="tot-cr-kg">0</div></div>
+      <div class="gt-item"><div class="gt-label">Total £</div><div class="gt-val gr" id="tot-cr-price">£0.00</div></div>
+      <div class="gt-item"><div class="gt-label">&nbsp;</div><div class="gt-val">&nbsp;</div></div>
+    </div>
+    <div class="content-pad"></div>
+  </div>
+
+</div>
+</div>
+<script>
+let hotRows=[],coldRows=[],nid=1;
+function mkH(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.section||'',length:d.length||'',qty:d.qty||'',kgm:d.kgm||'',m2m:d.m2m||'',rate:'',galvRate:'',paintRate:'',notes:d.notes||''};}
+function mkC(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.section||'',length:d.length||'',qty:d.qty||'',kgm:d.kgm||'',rate:'',notes:d.notes||''};}
+function addRow(t){if(t==='hot'){hotRows.push(mkH());renderHot();}else{coldRows.push(mkC());renderCold();}}
+function delRow(t,id){if(t==='hot'){hotRows=hotRows.filter(r=>r.id!==id);renderHot();}else{coldRows=coldRows.filter(r=>r.id!==id);renderCold();}}
+function upd(t,id,f,v){const rows=t==='hot'?hotRows:coldRows;const r=rows.find(x=>x.id===id);if(r){r[f]=v;t==='hot'?renderHot():renderCold();}}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+function calcH(r){
+  const len=+r.length||0,qty=+r.qty||0,kgm=+r.kgm||0,m2m=+r.m2m||0;
+  const rate=+r.rate||0,gr=+r.galvRate||0,pr=+r.paintRate||0;
+  const totalM=(len/1000)*qty,kg=totalM*kgm,tns=kg/1000,sa=totalM*m2m;
+  return{totalM,kg,tns,sa,sp:tns*rate,gp:tns*gr,pp:sa*pr,total:tns*rate+tns*gr+sa*pr};
+}
+function calcC(r){
+  const totalM=((+r.length||0)/1000)*(+r.qty||0);
+  return{totalM,kg:totalM*(+r.kgm||0),price:totalM*(+r.rate||0)};
+}
+function renderHot(){
+  let sKg=0,sSA=0,sTot=0;
+  document.getElementById('hot-rows').innerHTML=hotRows.map(r=>{
+    const c=calcH(r);sKg+=c.kg;sSA+=c.sa;sTot+=c.total;
+    return `<div class="row-card">
+      <div class="row-card-header">
+        <div style="display:flex;gap:6px;flex:1;min-width:0">
+          <input type="text" value="${esc(r.type)}" onchange="upd('hot',${r.id},'type',this.value)" placeholder="Type e.g. Column" style="flex:1;min-width:0">
+          <input type="text" value="${esc(r.section)}" onchange="upd('hot',${r.id},'section',this.value)" placeholder="Section" style="flex:1;min-width:0">
+        </div>
+        <button class="btn-danger" onclick="delRow('hot',${r.id})">✕</button>
+      </div>
+      <div class="row-card-body">
+        <div class="field-group"><div class="field-label">Dwg No.</div><input type="text" value="${esc(r.dwg)}" onchange="upd('hot',${r.id},'dwg',this.value)" placeholder="Dwg ref"></div>
+        <div class="field-group"><div class="field-label">Length (mm)</div><input type="number" value="${r.length}" onchange="upd('hot',${r.id},'length',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Qty</div><input type="number" value="${r.qty}" onchange="upd('hot',${r.id},'qty',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Kg/m</div><input type="number" value="${r.kgm}" onchange="upd('hot',${r.id},'kgm',this.value)" placeholder="0.00" step="0.01"></div>
+        <div class="field-group"><div class="field-label">M²/m</div><input type="number" value="${r.m2m}" onchange="upd('hot',${r.id},'m2m',this.value)" placeholder="0.000" step="0.001"></div>
+        <div class="field-group"><div class="field-label">Total m</div><div class="field-val">${c.totalM.toFixed(2)}</div></div>
+        <div class="field-group"><div class="field-label">Total Kg</div><div class="field-val">${c.kg.toFixed(1)}</div></div>
+        <div class="field-group"><div class="field-label">Surface m²</div><div class="field-val">${c.sa.toFixed(2)}</div></div>
+        <div class="field-group"><div class="field-label">Rate £/T</div><input type="number" value="${r.rate}" onchange="upd('hot',${r.id},'rate',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Galv £/T</div><input type="number" value="${r.galvRate}" onchange="upd('hot',${r.id},'galvRate',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Paint £/m²</div><input type="number" value="${r.paintRate}" onchange="upd('hot',${r.id},'paintRate',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Notes</div><input type="text" value="${esc(r.notes)}" onchange="upd('hot',${r.id},'notes',this.value)" placeholder="Notes"></div>
+      </div>
+      <div class="row-card-total"><span class="total-price">£${c.total.toFixed(2)}</span></div>
+    </div>`;
+  }).join('');
+  document.getElementById('tot-hr-kg').textContent=Math.round(sKg).toLocaleString();
+  document.getElementById('tot-hr-tns').textContent=(sKg/1000).toFixed(3);
+  document.getElementById('tot-hr-sa').textContent=sSA.toFixed(2);
+  document.getElementById('tot-hr-total').textContent='£'+sTot.toFixed(2);
+  updateSummary();
+}
+function renderCold(){
+  let sM=0,sKg=0,sP=0;
+  document.getElementById('cold-rows').innerHTML=coldRows.map(r=>{
+    const c=calcC(r);sM+=c.totalM;sKg+=c.kg;sP+=c.price;
+    return `<div class="row-card">
+      <div class="row-card-header">
+        <div style="display:flex;gap:6px;flex:1;min-width:0">
+          <input type="text" value="${esc(r.type)}" onchange="upd('cold',${r.id},'type',this.value)" placeholder="Type e.g. Purlin" style="flex:1;min-width:0">
+          <input type="text" value="${esc(r.section)}" onchange="upd('cold',${r.id},'section',this.value)" placeholder="Section" style="flex:1;min-width:0">
+        </div>
+        <button class="btn-danger" onclick="delRow('cold',${r.id})">✕</button>
+      </div>
+      <div class="row-card-body">
+        <div class="field-group"><div class="field-label">Dwg No.</div><input type="text" value="${esc(r.dwg)}" onchange="upd('cold',${r.id},'dwg',this.value)" placeholder="Dwg ref"></div>
+        <div class="field-group"><div class="field-label">Length (mm)</div><input type="number" value="${r.length}" onchange="upd('cold',${r.id},'length',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Qty</div><input type="number" value="${r.qty}" onchange="upd('cold',${r.id},'qty',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Kg/m</div><input type="number" value="${r.kgm}" onchange="upd('cold',${r.id},'kgm',this.value)" placeholder="0.00" step="0.01"></div>
+        <div class="field-group"><div class="field-label">Total m</div><div class="field-val">${c.totalM.toFixed(2)}</div></div>
+        <div class="field-group"><div class="field-label">Weight Kg</div><div class="field-val">${c.kg.toFixed(1)}</div></div>
+        <div class="field-group"><div class="field-label">Rate £/m</div><input type="number" value="${r.rate}" onchange="upd('cold',${r.id},'rate',this.value)" placeholder="0"></div>
+        <div class="field-group"><div class="field-label">Notes</div><input type="text" value="${esc(r.notes)}" onchange="upd('cold',${r.id},'notes',this.value)" placeholder="Notes"></div>
+      </div>
+      <div class="row-card-total"><span class="total-price">£${c.price.toFixed(2)}</span></div>
+    </div>`;
+  }).join('');
+  document.getElementById('tot-cr-m').textContent=sM.toFixed(2);
+  document.getElementById('tot-cr-kg').textContent=Math.round(sKg).toLocaleString();
+  document.getElementById('tot-cr-price').textContent='£'+sP.toFixed(2);
+  updateSummary();
+}
+function updateSummary(){
+  const hrKg=hotRows.reduce((s,r)=>s+calcH(r).kg,0);
+  const hrT=hotRows.reduce((s,r)=>s+calcH(r).total,0);
+  const crM=coldRows.reduce((s,r)=>s+calcC(r).totalM,0);
+  const crT=coldRows.reduce((s,r)=>s+calcC(r).price,0);
+  document.getElementById('s-hr-tns').textContent=(hrKg/1000).toFixed(3);
+  document.getElementById('s-cr-m').textContent=crM.toFixed(2);
+  document.getElementById('s-total').textContent='£'+Math.round(hrT+crT).toLocaleString();
+}
+function switchTab(tab){
+  ['pdf','rates','hot','cold'].forEach(t=>{
+    const p=document.getElementById('panel-'+t);
+    const tb=document.getElementById('tab-'+t);
+    if(p)p.classList.toggle('hidden',t!==tab);
+    if(tb)tb.className='tab'+(t===tab?' a-'+t:'');
+  });
+}
+function gv(id){return parseFloat(document.getElementById(id)?.value)||0;}
+function matchH(row){
+  const t=(row.type+' '+row.section).toLowerCase();
+  let rate=0;
+  if(/\buc\b|column/.test(t))rate=/s355/.test(t)?gv('r_uc_s355'):gv('r_uc_s275');
+  else if(/\bub\b|beam|rafter/.test(t))rate=/s355/.test(t)?gv('r_ub_s355'):gv('r_ub_s275');
+  else if(/rhs|shs/.test(t))rate=gv('r_rhs');
+  else if(/chs/.test(t))rate=gv('r_chs');
+  else if(/angle|plate/.test(t))rate=gv('r_angles');
+  return{rate:rate||gv('r_hr_default'),galvRate:gv('r_galv_default'),paintRate:gv('r_paint_default')};
+}
+function matchC(row){
+  const t=(row.type+' '+row.section).toLowerCase();
+  const s=parseInt((row.section||'').match(/(\d{3})/)?.[1]||'0');
+  if(/z|purlin/.test(t)){if(s>=262)return gv('r_zpurlin_heavy')||gv('r_cr_default');if(s>=200)return gv('r_zpurlin_med')||gv('r_cr_default');return gv('r_zpurlin_light')||gv('r_cr_default');}
+  if(/\bc\d|rail|side/.test(t))return(s>=200?gv('r_crail_med'):gv('r_crail_light'))||gv('r_cr_default');
+  if(/eave|apex/.test(t))return gv('r_eaves')||gv('r_cr_default');
+  return gv('r_cr_default');
+}
+function applyRates(){
+  hotRows.forEach(r=>{const m=matchH(r);r.rate=m.rate||'';r.galvRate=m.galvRate||'';r.paintRate=m.paintRate||'';});
+  coldRows.forEach(r=>{r.rate=matchC(r)||'';});
+  renderHot();renderCold();
+  const btn=event.target,orig=btn.textContent;
+  btn.textContent='✔ Applied!';btn.style.background='var(--green)';btn.style.color='#111';
+  setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color='';},2000);
+}
+function resetRates(){document.querySelectorAll('.rate-inp').forEach(i=>i.value='');}
+function handleFile(e){
+  const f=e.target.files[0];
+  if(!f)return;
+  processFile(f);
+}
+function toB64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Could not read file'));
+    r.readAsDataURL(file);
+  });
+}
+function setStep(n,s){
+  const el=document.getElementById('s'+n);
+  if(!el)return;
+  el.className='step'+(s==='done'?' done':s==='active'?' active':'');
+  el.querySelector('span').textContent=s==='done'?'✅':s==='active'?'🔄':'⏳';
+}
+function showErr(msg){
+  document.getElementById('spinner').style.display='none';
+  document.getElementById('progTitle').textContent='Failed';
+  const b=document.getElementById('resultBanner');
+  b.className='result-banner error show';
+  document.getElementById('resultIcon').textContent='❌';
+  document.getElementById('resultText').textContent=msg;
+}
+async function processFile(file){
+  const pb=document.getElementById('progBox');
+  const rb=document.getElementById('resultBanner');
+  pb.style.display='block';
+  rb.className='result-banner';
+  document.getElementById('spinner').style.display='';
+  document.getElementById('progTitle').textContent='Reading Drawing…';
+  [1,2,3,4,5].forEach(n=>setStep(n,''));
+  try{
+    setStep(1,'active');
+    const b64=await toB64(file);
+    if(!b64.startsWith('JVBERi'))throw new Error('Not a valid PDF file.');
+    setStep(1,'done');
+    setStep(2,'active');
+    // Calls our own server endpoint — no CORS issues, no API key needed in browser
+    const resp=await fetch('/api/analyse',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pdfBase64:b64})
+    });
+    setStep(2,'done');
+    setStep(3,'active');
+    const data=await resp.json();
+    if(!resp.ok||data.error)throw new Error(data.error||'Server error '+resp.status);
+    setStep(3,'done');
+    setStep(4,'active');
+    const hr=data.hotRolled||[],cr=data.coldRolled||[];
+    if(hr.length===0&&cr.length===0)throw new Error('No steel members found. Check the PDF is a structural drawing with member sizes shown.');
+    setStep(4,'done');
+    setStep(5,'active');
+    if(hr.length>0){hotRows=hr.map(d=>mkH(d));renderHot();}
+    if(cr.length>0){coldRows=cr.map(d=>mkC(d));renderCold();}
+    setStep(5,'done');
+    document.getElementById('spinner').style.display='none';
+    document.getElementById('progTitle').textContent='Complete ✓';
+    rb.className='result-banner success show';
+    document.getElementById('resultIcon').textContent='✅';
+    document.getElementById('resultText').innerHTML='<strong>Done!</strong> Found '+hr.length+' hot rolled + '+cr.length+' cold rolled members. Set your rates then tap Apply.';
+    setTimeout(()=>{if(hr.length>0)switchTab('hot');else if(cr.length>0)switchTab('cold');},1500);
+  }catch(err){showErr(err.message);}
+}
+function exportCSV(){
+  const proj=document.getElementById('projName').value||'Estimate';
+  let csv='R&L ESTIMATOR,'+proj+'\n\nHOT ROLLED\nDwg,Type,Section,Length mm,Qty,Total m,Kg/m,Total Kg,M2/m,Surface m2,Rate,Steel £,Galv,Galv £,Paint,Paint £,Total £,Notes\n';
+  hotRows.forEach(r=>{const c=calcH(r);csv+='"'+r.dwg+'","'+r.type+'","'+r.section+'",'+r.length+','+r.qty+','+c.totalM.toFixed(2)+','+r.kgm+','+c.kg.toFixed(1)+','+r.m2m+','+c.sa.toFixed(2)+','+r.rate+','+c.sp.toFixed(2)+','+r.galvRate+','+c.gp.toFixed(2)+','+r.paintRate+','+c.pp.toFixed(2)+','+c.total.toFixed(2)+',"'+r.notes+'"\n';});
+  csv+='\nCOLD ROLLED\nDwg,Type,Section,Length mm,Qty,Total m,Kg/m,Weight Kg,Rate,Price £,Notes\n';
+  coldRows.forEach(r=>{const c=calcC(r);csv+='"'+r.dwg+'","'+r.type+'","'+r.section+'",'+r.length+','+r.qty+','+c.totalM.toFixed(2)+','+r.kgm+','+c.kg.toFixed(1)+','+r.rate+','+c.price.toFixed(2)+',"'+r.notes+'"\n';});
+  const hrT=hotRows.reduce((s,r)=>s+calcH(r).total,0),crT=coldRows.reduce((s,r)=>s+calcC(r).price,0);
+  csv+='\nHot Rolled Total,£'+hrT.toFixed(2)+'\nCold Rolled Total,£'+crT.toFixed(2)+'\nGRAND TOTAL,£'+(hrT+crT).toFixed(2)+'\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=proj.replace(/\s+/g,'_')+'_Estimate.csv';a.click();
+}
+for(let i=0;i<2;i++)hotRows.push(mkH());
+coldRows.push(mkC());
+renderHot();renderCold();
+</script>
+</body>
+</html>
