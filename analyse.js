@@ -10,10 +10,10 @@ export default async function handler(req, res) {
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file — please upload a PDF drawing' });
 
-  const prompt = `You are a structural steel estimator. Extract all steel members from this drawing.
-Reply with ONLY a JSON object, no other text:
-{"hotRolled":[{"dwg":"","type":"","section":"","length":0,"qty":0,"kgm":0,"m2m":0,"notes":""}],"coldRolled":[{"dwg":"","type":"","section":"","length":0,"qty":0,"kgm":0,"notes":""}]}
-type=Column/Beam/Rafter/Bracing/Purlin/Rail etc, section=full UK designation e.g.203x203x46UC, length in mm, kgm from UK section tables. Keep notes brief.`;
+  const prompt = `Extract steel members from this structural drawing. Be concise.
+Return ONLY this JSON, no other text, no markdown:
+{"hotRolled":[{"dwg":"","type":"","section":"","length":0,"qty":0,"kgm":0,"m2m":0}],"coldRolled":[{"dwg":"","type":"","section":"","length":0,"qty":0,"kgm":0}]}
+Rules: type=Column/Beam/Rafter/Brace/Purlin/Rail, section=UK code e.g.203x203x46UC, length in mm, kgm from tables, omit notes field entirely.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -25,7 +25,7 @@ type=Column/Beam/Rafter/Bracing/Purlin/Rail etc, section=full UK designation e.g
       },
       body: JSON.stringify({
         model: 'claude-3-5-sonnet-20240620',
-        max_tokens: 8000,
+        max_tokens: 8192,
         messages: [{
           role: 'user',
           content: [
@@ -40,34 +40,45 @@ type=Column/Beam/Rafter/Bracing/Purlin/Rail etc, section=full UK designation e.g
 
     if (!response.ok) {
       let errMsg = 'API error ' + response.status;
-      try {
-        const e = JSON.parse(respText);
-        errMsg = e.error?.message || errMsg;
-      } catch(_) {}
+      try { const e = JSON.parse(respText); errMsg = e.error?.message || errMsg; } catch(_) {}
       return res.status(502).json({ error: errMsg });
     }
 
     let data;
-    try {
-      data = JSON.parse(respText);
-    } catch(e) {
-      return res.status(502).json({ error: 'Invalid response from AI service' });
-    }
+    try { data = JSON.parse(respText); }
+    catch(e) { return res.status(502).json({ error: 'Invalid response from AI service' }); }
 
     if (data.type === 'error') return res.status(502).json({ error: data.error?.message || 'AI error' });
-    if (!data.content || !data.content.length) return res.status(502).json({ error: 'Empty response from AI' });
 
-    const raw = data.content.filter(c => c.type === 'text').map(c => c.text).join('').trim();
-    if (!raw) return res.status(502).json({ error: 'No text in AI response' });
+    const stopReason = data.stop_reason || '';
+    const raw = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+
+    if (!raw) return res.status(502).json({ error: 'No response from AI' });
+
+    let jsonStr = raw;
+    if (stopReason === 'max_tokens' || !raw.endsWith('}')) {
+      let openBraces = 0, openBrackets = 0;
+      const lastComplete = raw.lastIndexOf('}');
+      let repair = lastComplete > 0 ? raw.slice(0, lastComplete + 1) : raw;
+      for (const ch of repair) {
+        if (ch === '{') openBraces++;
+        else if (ch === '}') openBraces--;
+        else if (ch === '[') openBrackets++;
+        else if (ch === ']') openBrackets--;
+      }
+      for (let i = 0; i < openBrackets; i++) repair += ']';
+      for (let i = 0; i < openBraces; i++) repair += '}';
+      jsonStr = repair;
+    }
 
     let parsed;
     try {
-      const first = raw.indexOf('{');
-      const last = raw.lastIndexOf('}');
-      if (first === -1 || last === -1) throw new Error('No JSON found');
-      parsed = JSON.parse(raw.slice(first, last + 1));
+      const first = jsonStr.indexOf('{');
+      const last = jsonStr.lastIndexOf('}');
+      if (first === -1 || last === -1) throw new Error('No JSON');
+      parsed = JSON.parse(jsonStr.slice(first, last + 1));
     } catch(e) {
-      return res.status(502).json({ error: 'Could not read AI output: ' + raw.slice(0, 150) });
+      return res.status(502).json({ error: 'Could not parse response. Drawing may be too complex — try a simpler drawing first.' });
     }
 
     return res.status(200).json({
