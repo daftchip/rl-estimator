@@ -114,6 +114,29 @@ input[type=number]{text-align:right;}
 <div class="content">
 
   <div id="panel-pdf">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);flex-shrink:0">Drawing Scale</div>
+      <select id="drawingScale" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:6px 10px;border-radius:4px;flex:1;min-width:120px;-webkit-appearance:none;">
+        <option value="auto">Auto-detect from drawing</option>
+        <option value="1:50">1:50</option>
+        <option value="1:100">1:100 (most common)</option>
+        <option value="1:200">1:200</option>
+        <option value="1:250">1:250</option>
+        <option value="1:500">1:500</option>
+        <option value="custom">Custom scale...</option>
+      </select>
+      <input type="text" id="customScale" placeholder="e.g. 1:150" style="display:none;width:100px;font-size:13px;padding:6px 8px;">
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);flex-shrink:0">Drawing Type</div>
+      <select id="drawingType" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:6px 10px;border-radius:4px;flex:1;-webkit-appearance:none;">
+        <option value="ga">General Arrangement (GA)</option>
+        <option value="framing">Framing Plan</option>
+        <option value="elevation">Elevation / Section</option>
+        <option value="schedule">Member Schedule</option>
+        <option value="detail">Detail Drawing</option>
+      </select>
+    </div>
     <div class="drop-zone">
       <input type="file" id="pdfInput" accept=".pdf,application/pdf" onchange="handleFile(event)">
       <span style="font-size:44px;display:block;margin-bottom:10px">📐</span>
@@ -380,10 +403,11 @@ async function processFile(file){
     if(!b64.startsWith('JVBERi'))throw new Error('Not a valid PDF file.');
     setStep(1,'done');
     setStep(2,'active');
+    const scaleInfo=getScaleInfo();
     const resp=await fetch('/api/analyse',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({pdfBase64:b64})
+      body:JSON.stringify({pdfBase64:b64,scale:scaleInfo.scale,drawingType:scaleInfo.type})
     });
     setStep(2,'done');
     setStep(3,'active');
@@ -420,6 +444,19 @@ function exportCSV(){
   csv+='\nHot Rolled Total,£'+hrT.toFixed(2)+'\nCold Rolled Total,£'+crT.toFixed(2)+'\nGRAND TOTAL,£'+(hrT+crT).toFixed(2)+'\n';
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=proj.replace(/\s+/g,'_')+'_Estimate.csv';a.click();
+}
+document.getElementById('drawingScale').addEventListener('change',function(){
+  const ci=document.getElementById('customScale');
+  ci.style.display=this.value==='custom'?'block':'none';
+});
+function getScaleInfo(){
+  const sel=document.getElementById('drawingScale');
+  const typ=document.getElementById('drawingType');
+  let scale=sel.value;
+  if(scale==='custom'){
+    scale=document.getElementById('customScale').value||'unknown';
+  }
+  return{scale,type:typ.value};
 }
 for(let i=0;i<2;i++)hotRows.push(mkH());
 coldRows.push(mkC());
