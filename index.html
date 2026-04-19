@@ -204,8 +204,12 @@ input[type=number]{text-align:right;}
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--crimson,#c0182e);margin-bottom:10px;">⚡ Quick Rate — £ per Tonne</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div>
-          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Supply &amp; Fabricate £/T</div>
-          <input type="number" id="q_supply" placeholder="e.g. 1100" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Supply £/T</div>
+          <input type="number" id="q_supply" placeholder="e.g. 800" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Fabricate £/T</div>
+          <input type="number" id="q_fab" placeholder="e.g. 300" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
         </div>
         <div>
           <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Erect £/T</div>
@@ -219,6 +223,24 @@ input[type=number]{text-align:right;}
           <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Paint £/T</div>
           <input type="number" id="q_paint" placeholder="e.g. 150" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
         </div>
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Connections £/T</div>
+          <input type="number" id="q_conn" placeholder="e.g. 100" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
+        </div>
+      </div>
+      <!-- Rate breakdown row -->
+      <div style="background:rgba(0,0,0,0.2);border-radius:4px;padding:8px 10px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--dim);">
+        <span>Supply: <strong id="qr-supply-val" style="color:var(--text)">£0</strong></span>
+        <span style="color:var(--border)">|</span>
+        <span>Fab: <strong id="qr-fab-val" style="color:var(--text)">£0</strong></span>
+        <span style="color:var(--border)">|</span>
+        <span>Erect: <strong id="qr-erect-val" style="color:var(--text)">£0</strong></span>
+        <span style="color:var(--border)">|</span>
+        <span>Galv: <strong id="qr-galv-val" style="color:var(--text)">£0</strong></span>
+        <span style="color:var(--border)">|</span>
+        <span>Paint: <strong id="qr-paint-val" style="color:var(--text)">£0</strong></span>
+        <span style="color:var(--border)">|</span>
+        <span>Conn: <strong id="qr-conn-val" style="color:var(--text)">£0</strong></span>
       </div>
       <div style="background:var(--inp);border-radius:6px;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
         <div>
@@ -511,15 +533,25 @@ function applyRates(){
 function resetRates(){document.querySelectorAll('.rate-inp').forEach(i=>i.value='');}
 function calcQuickRate(){
   const supply=parseFloat(document.getElementById('q_supply').value)||0;
+  const fab=parseFloat(document.getElementById('q_fab').value)||0;
   const erect=parseFloat(document.getElementById('q_erect').value)||0;
   const galv=parseFloat(document.getElementById('q_galv').value)||0;
   const paint=parseFloat(document.getElementById('q_paint').value)||0;
-  const totalRate=supply+erect+galv+paint;
+  const conn=parseFloat(document.getElementById('q_conn').value)||0;
+  const totalRate=supply+fab+erect+galv+paint+conn;
   const tonnes=hotRows.reduce((s,r)=>s+calcH(r).kg,0)/1000;
   const total=tonnes*totalRate;
   document.getElementById('qr-tonnes').textContent=tonnes.toFixed(3);
   document.getElementById('qr-rate').textContent='£'+Math.round(totalRate).toLocaleString();
   document.getElementById('qr-total').textContent='£'+Math.round(total).toLocaleString();
+  // Breakdown
+  const fmt=v=>v?'£'+Math.round(tonnes*v).toLocaleString():'£0';
+  document.getElementById('qr-supply-val').textContent=fmt(supply);
+  document.getElementById('qr-fab-val').textContent=fmt(fab);
+  document.getElementById('qr-erect-val').textContent=fmt(erect);
+  document.getElementById('qr-galv-val').textContent=fmt(galv);
+  document.getElementById('qr-paint-val').textContent=fmt(paint);
+  document.getElementById('qr-conn-val').textContent=fmt(conn);
 }
 function handleFile(e){
   const f=e.target.files[0];
