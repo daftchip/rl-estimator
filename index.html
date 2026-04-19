@@ -211,6 +211,27 @@ input[type=number]{text-align:right;}
 .btn-approve-cancel{background:transparent;color:var(--dim);border:1px solid var(--border);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;padding:10px 16px;cursor:pointer;}
 .needs-review-bar{background:rgba(231,76,60,0.1);border:1px solid var(--red);border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:12px;cursor:pointer;}
 .needs-review-bar .nr-count{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--red);}
+
+.work-badge{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:9px;padding:2px 5px;border-radius:2px;letter-spacing:.5px;}
+.work-badge.new{background:rgba(46,204,113,0.2);color:var(--green);}
+.work-badge.existing{background:rgba(138,154,181,0.2);color:var(--dim);}
+.work-badge.remove{background:rgba(231,76,60,0.2);color:var(--red);}
+
+.tab.a-labour{color:#a78bfa;border-color:#a78bfa;}
+.labour-card{background:var(--inp);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden;}
+.labour-card-hdr{background:var(--bg2);padding:8px 12px;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a78bfa;}
+.labour-row{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(51,68,102,.4);gap:8px;}
+.labour-row:last-child{border-bottom:none;}
+.labour-name{flex:1;font-size:11px;color:var(--dim);}
+.labour-val{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text);width:70px;text-align:right;}
+.labour-unit{font-size:10px;color:var(--dim);width:40px;text-align:center;flex-shrink:0;}
+.labour-inp{background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;padding:5px 8px;border-radius:3px;width:80px;text-align:right;flex-shrink:0;-webkit-appearance:none;}
+.labour-inp:focus{outline:none;border-color:#a78bfa;}
+.labour-summary{background:var(--inp);border:2px solid #a78bfa;border-radius:6px;padding:14px;margin-bottom:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;}
+.labour-sum-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.labour-sum-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;}
+.complexity-btn{background:var(--bg3);border:1px solid var(--border);color:var(--dim);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;border-radius:4px;cursor:pointer;transition:all .2s;}
+.complexity-btn.active{border-color:#a78bfa;color:#a78bfa;background:rgba(167,139,250,0.1);}
 </style>
 </head>
 <body>
@@ -240,6 +261,7 @@ input[type=number]{text-align:right;}
   <div class="tab" id="tab-cold" onclick="switchTab('cold')">❄ Cold Rolled</div>
   <div class="tab" id="tab-prices" onclick="switchTab('prices')">📋 Section Prices</div>
   <div class="tab" id="tab-revisions" onclick="switchTab('revisions')">🔀 Revisions</div>
+  <div class="tab" id="tab-labour" onclick="switchTab('labour')">⏱ Labour</div>
   <div style="flex:1"></div>
   <button onclick="resetAll()" style="background:none;border:none;color:#e74c3c;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:11px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;border-left:1px solid var(--border);">↺ Reset</button>
 </div>
@@ -268,6 +290,18 @@ input[type=number]{text-align:right;}
         <option value="schedule">Member Schedule</option>
         <option value="detail">Detail Drawing</option>
       </select>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);flex-shrink:0">Work Type</div>
+      <select id="workType" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;padding:6px 10px;border-radius:4px;flex:1;-webkit-appearance:none;" onchange="updateWorkTypeHint()">
+        <option value="new">New build — extract all steel</option>
+        <option value="alteration">Alteration / extension — new steel only</option>
+        <option value="demolition">Demolition items only</option>
+        <option value="all">Show all — new + existing + removed</option>
+      </select>
+    </div>
+    <div id="work-type-hint" style="background:rgba(240,165,0,0.08);border-left:3px solid var(--accent);padding:8px 12px;font-size:11px;color:var(--dim);border-radius:0 4px 4px 0;margin-bottom:10px;display:none">
+      <strong style="color:var(--accent)">Alteration mode:</strong> AI will ignore existing steel and only extract members marked as NEW, ADDITIONAL or TO BE PROVIDED. Members marked EXISTING, EX. or TO REMAIN will be excluded.
     </div>
     <div class="drop-zone">
       <input type="file" id="pdfInput" accept=".pdf,application/pdf" onchange="handleFile(event)">
@@ -538,6 +572,99 @@ input[type=number]{text-align:right;}
     <div class="content-pad"></div>
   </div>
 
+  <div id="panel-labour" class="hidden">
+    <div class="sec-title" style="color:#a78bfa">Labour Estimate <span class="badge" style="background:#a78bfa;color:#fff">FAB &amp; ERECT</span></div>
+
+    <!-- Complexity selector -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:12px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;">Job Complexity</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="complexity-btns">
+        <button class="complexity-btn active" onclick="setComplexity('simple')" id="cplx-simple">Simple<br><span style="font-size:9px;font-weight:400">Straight beams &amp; columns</span></button>
+        <button class="complexity-btn" onclick="setComplexity('medium')" id="cplx-medium">Medium<br><span style="font-size:9px;font-weight:400">Some connections &amp; bracing</span></button>
+        <button class="complexity-btn" onclick="setComplexity('complex')" id="cplx-complex">Complex<br><span style="font-size:9px;font-weight:400">Trusses, moment frames</span></button>
+        <button class="complexity-btn" onclick="setComplexity('heavy')" id="cplx-heavy">Heavy industrial<br><span style="font-size:9px;font-weight:400">Platework, special sections</span></button>
+      </div>
+    </div>
+
+    <!-- Live summary -->
+    <div class="labour-summary">
+      <div><div class="labour-sum-label">Total Tonnes</div><div class="labour-sum-val" id="lb-tonnes" style="color:var(--hot)">0.000</div></div>
+      <div><div class="labour-sum-label">Total Labour £</div><div class="labour-sum-val" id="lb-total" style="color:#a78bfa">£0</div></div>
+      <div><div class="labour-sum-label">Inc. Material</div><div class="labour-sum-val" id="lb-grand" style="color:var(--green)">£0</div></div>
+    </div>
+
+    <!-- Fabrication -->
+    <div class="labour-card">
+      <div class="labour-card-hdr">⚙ Fabrication</div>
+      <div class="labour-row">
+        <span class="labour-name">Fabrication rate</span>
+        <span class="labour-unit">£/T</span>
+        <input class="labour-inp" type="number" id="lb_fab_rate" placeholder="0" oninput="calcLabour()">
+        <span class="labour-val" id="lb_fab_cost" style="color:#a78bfa">£0</span>
+      </div>
+      <div class="labour-row">
+        <span class="labour-name">Suggested hours per tonne</span>
+        <span class="labour-unit">hrs/T</span>
+        <span class="labour-val" id="lb_fab_hrs_t" style="color:var(--dim)">—</span>
+        <span style="width:80px"></span>
+      </div>
+      <div class="labour-row">
+        <span class="labour-name">Total fabrication hours</span>
+        <span class="labour-unit">hours</span>
+        <span class="labour-val" id="lb_fab_hrs" style="color:var(--accent)">0</span>
+        <span style="width:80px"></span>
+      </div>
+    </div>
+
+    <!-- Erection -->
+    <div class="labour-card">
+      <div class="labour-card-hdr">🏗 Erection</div>
+      <div class="labour-row">
+        <span class="labour-name">Erection rate</span>
+        <span class="labour-unit">£/T</span>
+        <input class="labour-inp" type="number" id="lb_erect_rate" placeholder="0" oninput="calcLabour()">
+        <span class="labour-val" id="lb_erect_cost" style="color:#a78bfa">£0</span>
+      </div>
+      <div class="labour-row">
+        <span class="labour-name">Suggested hours per tonne</span>
+        <span class="labour-unit">hrs/T</span>
+        <span class="labour-val" id="lb_erect_hrs_t" style="color:var(--dim)">—</span>
+        <span style="width:80px"></span>
+      </div>
+      <div class="labour-row">
+        <span class="labour-name">Total erection hours</span>
+        <span class="labour-unit">hours</span>
+        <span class="labour-val" id="lb_erect_hrs" style="color:var(--accent)">0</span>
+        <span style="width:80px"></span>
+      </div>
+    </div>
+
+    <!-- Site prelims -->
+    <div class="labour-card">
+      <div class="labour-card-hdr">🚧 Site &amp; Prelims</div>
+      <div class="labour-row">
+        <span class="labour-name">Site prelims (crane, access etc.)</span>
+        <span class="labour-unit">£</span>
+        <input class="labour-inp" type="number" id="lb_prelims" placeholder="0" oninput="calcLabour()">
+        <span class="labour-val" id="lb_prelims_show" style="color:#a78bfa">£0</span>
+      </div>
+      <div class="labour-row">
+        <span class="labour-name">Bolts, consumables &amp; fixings</span>
+        <span class="labour-unit">£/T</span>
+        <input class="labour-inp" type="number" id="lb_consumables" placeholder="0" oninput="calcLabour()">
+        <span class="labour-val" id="lb_consumables_cost" style="color:#a78bfa">£0</span>
+      </div>
+    </div>
+
+    <!-- Suggested rates info box -->
+    <div class="info-box" id="lb-suggestion-box">
+      <strong>Suggested rates will appear here</strong> once you select a complexity level above.
+    </div>
+
+    <button class="btn-apply" style="background:rgba(167,139,250,0.1);color:#a78bfa;border:1px solid #a78bfa;margin-top:10px;" onclick="applyLabourToRates()">✔ Copy Labour Rates to Rates Tab</button>
+    <div class="content-pad"></div>
+  </div>
+
   <div id="panel-prices" class="hidden">
     <div class="sec-title" style="color:#10b981">Section Prices <span class="badge" style="background:#10b981;color:#fff">YOUR R&L RATES</span></div>
     <div class="price-summary">
@@ -706,7 +833,7 @@ function updateSummary(){
   document.getElementById('s-total').textContent='£'+Math.round(hrT+crT).toLocaleString();
 }
 function switchTab(tab){
-  ['pdf','rates','hot','cold','prices','revisions'].forEach(t=>{
+  ['pdf','rates','hot','cold','prices','revisions','labour'].forEach(t=>{
     const p=document.getElementById('panel-'+t);
     const tb=document.getElementById('tab-'+t);
     if(p)p.classList.toggle('hidden',t!==tab);
@@ -714,6 +841,7 @@ function switchTab(tab){
   });
   if(tab==='rates')calcQuickRate();
   if(tab==='prices')renderPrices();
+  if(tab==='labour'){calcLabour();setComplexity(_complexity);}
 }
 function gv(id){return parseFloat(document.getElementById(id)?.value)||0;}
 function matchH(row){
@@ -1476,6 +1604,82 @@ function showNeedsReviewBar(count){
   const hotPanel = document.getElementById('panel-hot');
   if(hotPanel) hotPanel.insertBefore(bar, hotPanel.firstChild);
 }
+
+// ── LABOUR ESTIMATE ──
+const COMPLEXITY = {
+  simple:  {fabHrsT:6,  erectHrsT:4,  fabRateT:300,  erectRateT:200, label:'Simple frames, straight beams and columns. Min welding, standard connections.'},
+  medium:  {fabHrsT:10, erectHrsT:6,  fabRateT:450,  erectRateT:280, label:'Medium complexity. Bracing, moment connections, some welded detail.'},
+  complex: {fabHrsT:16, erectHrsT:9,  fabRateT:650,  erectRateT:380, label:'Complex frames, trusses, moment frames. Heavy welding and detailing.'},
+  heavy:   {fabHrsT:24, erectHrsT:12, fabRateT:900,  erectRateT:500, label:'Heavy industrial. Platework, special sections, high-spec connections.'}
+};
+let _complexity = 'simple';
+
+function setComplexity(key){
+  _complexity = key;
+  Object.keys(COMPLEXITY).forEach(k=>{
+    const btn = document.getElementById('cplx-'+k);
+    if(btn) btn.className = 'complexity-btn' + (k===key?' active':'');
+  });
+  const c = COMPLEXITY[key];
+  // Fill in suggested rates
+  const fabEl = document.getElementById('lb_fab_rate');
+  const erectEl = document.getElementById('lb_erect_rate');
+  if(fabEl && !fabEl.value) fabEl.value = c.fabRateT;
+  if(erectEl && !erectEl.value) erectEl.value = c.erectRateT;
+  // Update suggestion box
+  const box = document.getElementById('lb-suggestion-box');
+  if(box) box.innerHTML = `<strong style="color:#a78bfa">${key.charAt(0).toUpperCase()+key.slice(1)} complexity:</strong> ${c.label}<br>
+    <span style="color:var(--dim)">Suggested: Fab ${c.fabHrsT} hrs/T · Erect ${c.erectHrsT} hrs/T · Fab rate £${c.fabRateT}/T · Erect rate £${c.erectRateT}/T</span>`;
+  calcLabour();
+}
+
+function calcLabour(){
+  const tonnes = hotRows.reduce((s,r)=>s+calcH(r).kg,0)/1000;
+  const matTotal = hotRows.reduce((s,r)=>s+calcH(r).total,0) + coldRows.reduce((s,r)=>s+calcC(r).price,0);
+  const c = COMPLEXITY[_complexity];
+
+  const fabRate = parseFloat(document.getElementById('lb_fab_rate')?.value)||0;
+  const erectRate = parseFloat(document.getElementById('lb_erect_rate')?.value)||0;
+  const prelims = parseFloat(document.getElementById('lb_prelims')?.value)||0;
+  const consumables = parseFloat(document.getElementById('lb_consumables')?.value)||0;
+
+  const fabCost = tonnes * fabRate;
+  const erectCost = tonnes * erectRate;
+  const consumCost = tonnes * consumables;
+  const labourTotal = fabCost + erectCost + prelims + consumCost;
+  const grandTotal = matTotal + labourTotal;
+
+  const fabHrs = Math.round(tonnes * c.fabHrsT);
+  const erectHrs = Math.round(tonnes * c.erectHrsT);
+
+  // Update display
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('lb-tonnes', tonnes.toFixed(3));
+  set('lb-total', '£'+Math.round(labourTotal).toLocaleString());
+  set('lb-grand', '£'+Math.round(grandTotal).toLocaleString());
+  set('lb_fab_cost', fabCost>0?'£'+Math.round(fabCost).toLocaleString():'£0');
+  set('lb_erect_cost', erectCost>0?'£'+Math.round(erectCost).toLocaleString():'£0');
+  set('lb_prelims_show', prelims>0?'£'+Math.round(prelims).toLocaleString():'£0');
+  set('lb_consumables_cost', consumCost>0?'£'+Math.round(consumCost).toLocaleString():'£0');
+  set('lb_fab_hrs_t', c.fabHrsT+' hrs');
+  set('lb_erect_hrs_t', c.erectHrsT+' hrs');
+  set('lb_fab_hrs', fabHrs.toLocaleString());
+  set('lb_erect_hrs', erectHrs.toLocaleString());
+}
+
+function applyLabourToRates(){
+  const fabRate = document.getElementById('lb_fab_rate')?.value;
+  const erectRate = document.getElementById('lb_erect_rate')?.value;
+  // Copy to rates tab fields
+  const erEl = document.getElementById('r_erection');
+  if(erEl && erectRate) erEl.value = erectRate;
+  // Recalc
+  calcQuickRate();
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '✔ Copied to Rates!';
+  setTimeout(()=>{ btn.textContent=orig; }, 2000);
+}
 for(let i=0;i<2;i++)hotRows.push(mkH());
   coldRows.push(mkC());
   document.getElementById('projName').value='';
@@ -1554,7 +1758,7 @@ async function processFile(file){
     const resp=await fetch('/api/analyse',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({pdfBase64:b64,scale:scaleInfo.scale,drawingType:scaleInfo.type})
+      body:JSON.stringify({pdfBase64:b64,scale:scaleInfo.scale,drawingType:scaleInfo.type,workType:scaleInfo.workType})
     });
     setStep(2,'done');
     setStep(3,'active');
@@ -1611,11 +1815,28 @@ document.getElementById('drawingScale').addEventListener('change',function(){
 function getScaleInfo(){
   const sel=document.getElementById('drawingScale');
   const typ=document.getElementById('drawingType');
+  const wt=document.getElementById('workType');
   let scale=sel.value;
   if(scale==='custom'){
     scale=document.getElementById('customScale').value||'unknown';
   }
-  return{scale,type:typ.value};
+  return{scale,type:typ.value,workType:wt?wt.value:'new'};
+}
+function updateWorkTypeHint(){
+  const wt=document.getElementById('workType');
+  const hint=document.getElementById('work-type-hint');
+  if(!wt||!hint)return;
+  const msgs={
+    new:'',
+    alteration:'<strong style="color:var(--accent)">Alteration mode:</strong> AI will ignore existing steel and only extract members marked as NEW, ADDITIONAL or TO BE PROVIDED. Members marked EXISTING, EX. or TO REMAIN will be excluded.',
+    demolition:'<strong style="color:var(--red)">Demolition mode:</strong> AI will only extract members marked for removal, demolition or to be cut out.',
+    all:'<strong style="color:var(--accent)">All mode:</strong> AI will extract all steel and label each item as NEW, EXISTING or REMOVE so you can filter manually.'
+  };
+  hint.style.display=wt.value==='new'?'none':'block';
+  hint.innerHTML=msgs[wt.value]||'';
+  // Change border colour for demolition
+  hint.style.borderLeftColor=wt.value==='demolition'?'var(--red)':'var(--accent)';
+  hint.style.background=wt.value==='demolition'?'rgba(231,76,60,0.08)':'rgba(240,165,0,0.08)';
 }
 for(let i=0;i<2;i++)hotRows.push(mkH());
 coldRows.push(mkC());
