@@ -88,6 +88,38 @@ input[type=number]{text-align:right;}
 .result-banner.show{display:flex;}
 .result-banner.success{background:#1a3a2a;border:1px solid var(--green);color:var(--green);}
 .result-banner.error{background:#3a1a1a;border:1px solid var(--red);color:var(--red);}
+
+/* ── TAKE-OFF TABLE ── */
+.takeoff-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:10px;border-radius:6px;border:1px solid var(--border);}
+.takeoff-table{width:100%;border-collapse:collapse;min-width:900px;}
+.takeoff-table thead tr{background:var(--inp);}
+.takeoff-table thead th{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);padding:8px 6px;text-align:right;border-bottom:2px solid var(--border);white-space:nowrap;}
+.takeoff-table thead th:first-child,.takeoff-table thead th:nth-child(2),.takeoff-table thead th:nth-child(3){text-align:left;}
+.takeoff-table tbody tr{border-bottom:1px solid rgba(51,68,102,0.4);transition:background .15s;}
+.takeoff-table tbody tr:hover{background:rgba(240,165,0,0.04);}
+.takeoff-table tbody tr:nth-child(even){background:rgba(255,255,255,0.02);}
+.takeoff-table tbody td{padding:7px 6px;font-size:12px;text-align:right;vertical-align:middle;}
+.takeoff-table tbody td:first-child,.takeoff-table tbody td:nth-child(2),.takeoff-table tbody td:nth-child(3){text-align:left;}
+.takeoff-table tbody td input{background:transparent;border:none;color:var(--text);font-family:'Barlow',sans-serif;font-size:12px;text-align:right;width:100%;min-width:50px;padding:2px 0;-webkit-appearance:none;}
+.takeoff-table tbody td input:focus{outline:none;color:var(--accent);}
+.takeoff-table tbody td input.left{text-align:left;}
+.takeoff-table tbody td.calc{color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;}
+.takeoff-table tbody td.price{color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;}
+.takeoff-table tbody td.del-cell{text-align:center;width:28px;}
+.del-btn{background:none;border:none;color:#444;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:3px;line-height:1;}
+.del-btn:hover{background:var(--red);color:#fff;}
+/* section group header */
+.grp-hdr td{background:linear-gradient(90deg,rgba(224,92,42,0.15),transparent);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--hot);padding:5px 6px!important;border-top:1px solid rgba(224,92,42,0.3);}
+/* totals row */
+.tot-row td{background:var(--inp);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);border-top:2px solid var(--border);}
+.tot-row td.price{color:var(--green);font-size:15px;}
+/* cold table */
+.takeoff-table.cold thead tr{background:var(--inp);}
+.takeoff-table.cold .grp-hdr td{background:linear-gradient(90deg,rgba(42,122,224,0.15),transparent);color:var(--cold);border-top:1px solid rgba(42,122,224,0.3);}
+/* add row btn */
+.add-row-btn{background:none;border:1px dashed var(--border);color:var(--dim);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border-radius:4px;cursor:pointer;width:100%;margin-top:6px;transition:all .2s;}
+.add-row-btn:hover{border-color:var(--accent);color:var(--accent);}
+
 </style>
 </head>
 <body>
@@ -208,29 +240,89 @@ input[type=number]{text-align:right;}
 
   <div id="panel-hot" class="hidden">
     <div class="sec-title">Hot Rolled Steel <span class="badge badge-hot">UC · UB · RHS · CHS</span></div>
-    <div id="hot-rows"></div>
-    <button class="btn-add" onclick="addRow('hot')">+ Add Member</button>
-    <div class="grand-total">
-      <div class="gt-item"><div class="gt-label">Total Kg</div><div class="gt-val or" id="tot-hr-kg">0</div></div>
-      <div class="gt-item"><div class="gt-label">Tonnes</div><div class="gt-val or" id="tot-hr-tns">0.000</div></div>
-      <div class="gt-item"><div class="gt-label">Surface m²</div><div class="gt-val or" id="tot-hr-sa">0.00</div></div>
-      <div class="gt-item"><div class="gt-label">Total £</div><div class="gt-val gr" id="tot-hr-total">£0.00</div></div>
+    <div class="takeoff-wrap">
+      <table class="takeoff-table">
+        <thead>
+          <tr>
+            <th style="min-width:60px">Dwg No.</th>
+            <th style="min-width:80px">Type</th>
+            <th style="min-width:120px">Section</th>
+            <th>Length<br>mm</th>
+            <th>Qty</th>
+            <th>Total<br>m</th>
+            <th>Kg/m</th>
+            <th>Total<br>Kg</th>
+            <th>Rate<br>£/T</th>
+            <th>Steel<br>£</th>
+            <th>M²/m</th>
+            <th>Galv<br>£/T</th>
+            <th>Surface<br>m²</th>
+            <th>Paint<br>£/m²</th>
+            <th>Total<br>£</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="hot-rows"></tbody>
+        <tfoot>
+          <tr class="tot-row">
+            <td colspan="7" style="text-align:left;padding-left:6px;color:var(--dim)">TOTALS</td>
+            <td id="tot-hr-kg" style="color:var(--hot)">0</td>
+            <td></td>
+            <td id="tot-hr-total" class="price">£0</td>
+            <td></td>
+            <td></td>
+            <td id="tot-hr-sa" style="color:var(--accent)">0.00</td>
+            <td></td>
+            <td class="price" style="font-size:16px" id="tot-hr-grand">£0</td>
+            <td></td>
+          </tr>
+          <tr style="background:var(--bg2)">
+            <td colspan="7" style="padding:4px 6px;font-size:10px;color:var(--dim);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase">Tonnes</td>
+            <td colspan="9" style="padding:4px 6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--hot)" id="tot-hr-tns">0.000 T</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
+    <button class="add-row-btn" onclick="addRow('hot')">+ Add Member</button>
+    <div class="content-pad"></div>
+  </div>
+  <div id="panel-cold" class="hidden">
+    <div class="sec-title">Cold Rolled — Metsec <span class="badge badge-cold">PURLINS · RAILS</span></div>
+    <div class="takeoff-wrap">
+      <table class="takeoff-table cold">
+        <thead>
+          <tr>
+            <th style="min-width:60px">Dwg No.</th>
+            <th style="min-width:80px">Type</th>
+            <th style="min-width:100px">Section</th>
+            <th>Length<br>mm</th>
+            <th>Qty</th>
+            <th>Total<br>m</th>
+            <th>Kg/m</th>
+            <th>Weight<br>Kg</th>
+            <th>Rate<br>£/m</th>
+            <th>Price<br>£</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cold-rows"></tbody>
+        <tfoot>
+          <tr class="tot-row">
+            <td colspan="5" style="text-align:left;padding-left:6px;color:var(--dim)">TOTALS</td>
+            <td id="tot-cr-m" style="color:var(--cold)">0.00</td>
+            <td></td>
+            <td id="tot-cr-kg" style="color:var(--cold)">0</td>
+            <td></td>
+            <td id="tot-cr-price" class="price">£0</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <button class="add-row-btn" onclick="addRow('cold')">+ Add Member</button>
     <div class="content-pad"></div>
   </div>
 
-  <div id="panel-cold" class="hidden">
-    <div class="sec-title">Cold Rolled — Metsec <span class="badge badge-cold">PURLINS · RAILS</span></div>
-    <div id="cold-rows"></div>
-    <button class="btn-add" onclick="addRow('cold')">+ Add Member</button>
-    <div class="grand-total">
-      <div class="gt-item"><div class="gt-label">Total Metres</div><div class="gt-val bl" id="tot-cr-m">0.00</div></div>
-      <div class="gt-item"><div class="gt-label">Weight Kg</div><div class="gt-val bl" id="tot-cr-kg">0</div></div>
-      <div class="gt-item"><div class="gt-label">Total £</div><div class="gt-val gr" id="tot-cr-price">£0.00</div></div>
-      <div class="gt-item"><div class="gt-label">&nbsp;</div><div class="gt-val">&nbsp;</div></div>
-    </div>
-    <div class="content-pad"></div>
-  </div>
 
 </div>
 </div>
@@ -252,71 +344,86 @@ function calcC(r){
   const totalM=((+r.length||0)/1000)*(+r.qty||0);
   return{totalM,kg:totalM*(+r.kgm||0),price:totalM*(+r.rate||0)};
 }
+
+// ── SORT helpers ──
+function sectionWeight(section){
+  const m=section.match(/x(\d+(\.\d+)?)(UC|UB|RHS|CHS|SHS)?$/i);
+  return m?parseFloat(m[1]):0;
+}
+function sortHot(){
+  hotRows.sort((a,b)=>{
+    const wa=+a.kgm||sectionWeight(a.section),wb=+b.kgm||sectionWeight(b.section);
+    if(wa!==wb)return wa-wb;
+    return (a.section||'').localeCompare(b.section||'');
+  });
+}
+function sortCold(){
+  coldRows.sort((a,b)=>(a.section||'').localeCompare(b.section||''));
+}
+
+// ── HOT ROLLED TABLE ──
 function renderHot(){
+  sortHot();
   let sKg=0,sSA=0,sTot=0;
-  document.getElementById('hot-rows').innerHTML=hotRows.map(r=>{
+  let rows='';
+  hotRows.forEach(r=>{
     const c=calcH(r);sKg+=c.kg;sSA+=c.sa;sTot+=c.total;
-    return `<div class="row-card">
-      <div class="row-card-header">
-        <div style="display:flex;gap:6px;flex:1;min-width:0">
-          <input type="text" value="${esc(r.type)}" onchange="upd('hot',${r.id},'type',this.value)" placeholder="Type e.g. Column" style="flex:1;min-width:0">
-          <input type="text" value="${esc(r.section)}" onchange="upd('hot',${r.id},'section',this.value)" placeholder="Section" style="flex:1;min-width:0">
-        </div>
-        <button class="btn-danger" onclick="delRow('hot',${r.id})">✕</button>
-      </div>
-      <div class="row-card-body">
-        <div class="field-group"><div class="field-label">Dwg No.</div><input type="text" value="${esc(r.dwg)}" onchange="upd('hot',${r.id},'dwg',this.value)" placeholder="Dwg ref"></div>
-        <div class="field-group"><div class="field-label">Length (mm)</div><input type="number" value="${r.length}" onchange="upd('hot',${r.id},'length',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Qty</div><input type="number" value="${r.qty}" onchange="upd('hot',${r.id},'qty',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Kg/m</div><input type="number" value="${r.kgm}" onchange="upd('hot',${r.id},'kgm',this.value)" placeholder="0.00" step="0.01"></div>
-        <div class="field-group"><div class="field-label">M²/m</div><input type="number" value="${r.m2m}" onchange="upd('hot',${r.id},'m2m',this.value)" placeholder="0.000" step="0.001"></div>
-        <div class="field-group"><div class="field-label">Total m</div><div class="field-val">${c.totalM.toFixed(2)}</div></div>
-        <div class="field-group"><div class="field-label">Total Kg</div><div class="field-val">${c.kg.toFixed(1)}</div></div>
-        <div class="field-group"><div class="field-label">Surface m²</div><div class="field-val">${c.sa.toFixed(2)}</div></div>
-        <div class="field-group"><div class="field-label">Rate £/T</div><input type="number" value="${r.rate}" onchange="upd('hot',${r.id},'rate',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Galv £/T</div><input type="number" value="${r.galvRate}" onchange="upd('hot',${r.id},'galvRate',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Paint £/m²</div><input type="number" value="${r.paintRate}" onchange="upd('hot',${r.id},'paintRate',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Notes</div><input type="text" value="${esc(r.notes)}" onchange="upd('hot',${r.id},'notes',this.value)" placeholder="Notes"></div>
-      </div>
-      <div class="row-card-total"><span class="total-price">£${c.total.toFixed(2)}</span></div>
-    </div>`;
-  }).join('');
-  document.getElementById('tot-hr-kg').textContent=Math.round(sKg).toLocaleString();
-  document.getElementById('tot-hr-tns').textContent=(sKg/1000).toFixed(3);
-  document.getElementById('tot-hr-sa').textContent=sSA.toFixed(2);
-  document.getElementById('tot-hr-total').textContent='£'+sTot.toFixed(2);
+    rows+=`<tr data-id="${r.id}">
+      <td><input class="left" type="text" value="${esc(r.dwg)}" onchange="upd('hot',${r.id},'dwg',this.value)" placeholder="—"></td>
+      <td><input class="left" type="text" value="${esc(r.type)}" onchange="upd('hot',${r.id},'type',this.value)" placeholder="Type"></td>
+      <td><input class="left" type="text" value="${esc(r.section)}" onchange="upd('hot',${r.id},'section',this.value)" placeholder="Section"></td>
+      <td><input type="number" value="${r.length||''}" onchange="upd('hot',${r.id},'length',this.value)" placeholder="0"></td>
+      <td><input type="number" value="${r.qty||''}" onchange="upd('hot',${r.id},'qty',this.value)" placeholder="0"></td>
+      <td class="calc">${c.totalM.toFixed(2)}</td>
+      <td><input type="number" value="${r.kgm||''}" onchange="upd('hot',${r.id},'kgm',this.value)" placeholder="0.00" step="0.01"></td>
+      <td class="calc">${c.kg.toFixed(1)}</td>
+      <td><input type="number" value="${r.rate||''}" onchange="upd('hot',${r.id},'rate',this.value)" placeholder="0"></td>
+      <td class="price">£${c.sp.toFixed(0)}</td>
+      <td><input type="number" value="${r.m2m||''}" onchange="upd('hot',${r.id},'m2m',this.value)" placeholder="0.000" step="0.001"></td>
+      <td><input type="number" value="${r.galvRate||''}" onchange="upd('hot',${r.id},'galvRate',this.value)" placeholder="0"></td>
+      <td class="calc">${c.sa.toFixed(2)}</td>
+      <td><input type="number" value="${r.paintRate||''}" onchange="upd('hot',${r.id},'paintRate',this.value)" placeholder="0"></td>
+      <td class="price">£${c.total.toFixed(0)}</td>
+      <td class="del-cell"><button class="del-btn" onclick="delRow('hot',${r.id})">✕</button></td>
+    </tr>`;
+  });
+  document.getElementById('hot-rows').innerHTML=rows;
+  // totals
+  const kgEl=document.getElementById('tot-hr-kg');if(kgEl)kgEl.textContent=Math.round(sKg).toLocaleString();
+  const tnsEl=document.getElementById('tot-hr-tns');if(tnsEl)tnsEl.textContent=(sKg/1000).toFixed(3)+' T';
+  const saEl=document.getElementById('tot-hr-sa');if(saEl)saEl.textContent=sSA.toFixed(2);
+  document.getElementById('tot-hr-total').textContent='£'+Math.round(sTot).toLocaleString();
   updateSummary();
 }
+
+// ── COLD ROLLED TABLE ──
 function renderCold(){
+  sortCold();
   let sM=0,sKg=0,sP=0;
-  document.getElementById('cold-rows').innerHTML=coldRows.map(r=>{
+  let rows='';
+  coldRows.forEach(r=>{
     const c=calcC(r);sM+=c.totalM;sKg+=c.kg;sP+=c.price;
-    return `<div class="row-card">
-      <div class="row-card-header">
-        <div style="display:flex;gap:6px;flex:1;min-width:0">
-          <input type="text" value="${esc(r.type)}" onchange="upd('cold',${r.id},'type',this.value)" placeholder="Type e.g. Purlin" style="flex:1;min-width:0">
-          <input type="text" value="${esc(r.section)}" onchange="upd('cold',${r.id},'section',this.value)" placeholder="Section" style="flex:1;min-width:0">
-        </div>
-        <button class="btn-danger" onclick="delRow('cold',${r.id})">✕</button>
-      </div>
-      <div class="row-card-body">
-        <div class="field-group"><div class="field-label">Dwg No.</div><input type="text" value="${esc(r.dwg)}" onchange="upd('cold',${r.id},'dwg',this.value)" placeholder="Dwg ref"></div>
-        <div class="field-group"><div class="field-label">Length (mm)</div><input type="number" value="${r.length}" onchange="upd('cold',${r.id},'length',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Qty</div><input type="number" value="${r.qty}" onchange="upd('cold',${r.id},'qty',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Kg/m</div><input type="number" value="${r.kgm}" onchange="upd('cold',${r.id},'kgm',this.value)" placeholder="0.00" step="0.01"></div>
-        <div class="field-group"><div class="field-label">Total m</div><div class="field-val">${c.totalM.toFixed(2)}</div></div>
-        <div class="field-group"><div class="field-label">Weight Kg</div><div class="field-val">${c.kg.toFixed(1)}</div></div>
-        <div class="field-group"><div class="field-label">Rate £/m</div><input type="number" value="${r.rate}" onchange="upd('cold',${r.id},'rate',this.value)" placeholder="0"></div>
-        <div class="field-group"><div class="field-label">Notes</div><input type="text" value="${esc(r.notes)}" onchange="upd('cold',${r.id},'notes',this.value)" placeholder="Notes"></div>
-      </div>
-      <div class="row-card-total"><span class="total-price">£${c.price.toFixed(2)}</span></div>
-    </div>`;
-  }).join('');
+    rows+=`<tr data-id="${r.id}">
+      <td><input class="left" type="text" value="${esc(r.dwg)}" onchange="upd('cold',${r.id},'dwg',this.value)" placeholder="—"></td>
+      <td><input class="left" type="text" value="${esc(r.type)}" onchange="upd('cold',${r.id},'type',this.value)" placeholder="Type"></td>
+      <td><input class="left" type="text" value="${esc(r.section)}" onchange="upd('cold',${r.id},'section',this.value)" placeholder="Section"></td>
+      <td><input type="number" value="${r.length||''}" onchange="upd('cold',${r.id},'length',this.value)" placeholder="0"></td>
+      <td><input type="number" value="${r.qty||''}" onchange="upd('cold',${r.id},'qty',this.value)" placeholder="0"></td>
+      <td class="calc">${c.totalM.toFixed(2)}</td>
+      <td><input type="number" value="${r.kgm||''}" onchange="upd('cold',${r.id},'kgm',this.value)" placeholder="0.00" step="0.01"></td>
+      <td class="calc">${c.kg.toFixed(1)}</td>
+      <td><input type="number" value="${r.rate||''}" onchange="upd('cold',${r.id},'rate',this.value)" placeholder="0"></td>
+      <td class="price">£${c.price.toFixed(0)}</td>
+      <td class="del-cell"><button class="del-btn" onclick="delRow('cold',${r.id})">✕</button></td>
+    </tr>`;
+  });
+  document.getElementById('cold-rows').innerHTML=rows;
   document.getElementById('tot-cr-m').textContent=sM.toFixed(2);
   document.getElementById('tot-cr-kg').textContent=Math.round(sKg).toLocaleString();
-  document.getElementById('tot-cr-price').textContent='£'+sP.toFixed(2);
+  document.getElementById('tot-cr-price').textContent='£'+Math.round(sP).toLocaleString();
   updateSummary();
 }
+
 function updateSummary(){
   const hrKg=hotRows.reduce((s,r)=>s+calcH(r).kg,0);
   const hrT=hotRows.reduce((s,r)=>s+calcH(r).total,0);
