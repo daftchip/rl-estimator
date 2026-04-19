@@ -22,28 +22,19 @@ export default async function handler(req, res) {
 
   const workTypeInstructions = {
     new: `This is a NEW BUILD. Extract ALL steel members shown on the drawing.`,
-
     alteration: `This is an ALTERATION / EXTENSION project. 
 CRITICAL: Only extract steel that is NEW or to be PROVIDED.
-- INCLUDE members marked: NEW, N, ADDITIONAL, TO BE PROVIDED, NEW STEEL, ADD., (N), coloured/hatched differently from existing
-- EXCLUDE members marked: EXISTING, EX., EXIST., E, TO REMAIN, EXISTING STEEL, (E), shown dashed/greyed out
+- INCLUDE members marked: NEW, N, ADDITIONAL, TO BE PROVIDED, NEW STEEL, ADD., (N)
+- EXCLUDE members marked: EXISTING, EX., EXIST., E, TO REMAIN, EXISTING STEEL, (E)
 - EXCLUDE any steel that is part of the existing structure unless it needs modification
-- If unsure whether a member is new or existing, give it a lower confidence score and flag it
-- Focus on what the contractor would need to SUPPLY AND FIX`,
-
+- If unsure whether a member is new or existing, give it a lower confidence score and flag it`,
     demolition: `This is a DEMOLITION project.
 Only extract steel members that are to be REMOVED or DEMOLISHED.
-- INCLUDE members marked: REMOVE, DEMOLISH, DEMO, TO BE REMOVED, CUT OUT, (R), shown with X through them
+- INCLUDE members marked: REMOVE, DEMOLISH, DEMO, TO BE REMOVED, CUT OUT, (R)
 - EXCLUDE all steel that is to remain
-- EXCLUDE all new steel
-- List only what needs to be taken down`,
-
+- EXCLUDE all new steel`,
     all: `Extract ALL steel members and classify each one.
-For the "notes" field, label each member as one of:
-- NEW — new steel to be supplied and erected
-- EXISTING — existing steel to remain
-- REMOVE — existing steel to be demolished/removed
-Look for annotations, hatch patterns, revision clouds, or notes indicating status.`
+For the notes field, label each member as NEW, EXISTING or REMOVE.`
   };
 
   const workInstr = workTypeInstructions[workType||'new'] || workTypeInstructions.new;
@@ -60,7 +51,7 @@ ${workInstr}
 For each member, assign a confidence score (0-100):
 - 90-100: Section size, length and quantity clearly stated
 - 70-89: Most info clear but some inferred
-- 50-69: Section identified but length or qty uncertain  
+- 50-69: Section identified but length or qty uncertain
 - Below 50: Guessed — flag for human review
 
 Return ONLY a CSV table, no headers, no explanation:
@@ -121,28 +112,17 @@ Use 0 for unknown values. Include every qualifying member.`;
       const type = parts[0];
       if (type === 'HOT' && parts.length >= 7) {
         hotRolled.push({
-          dwg: parts[1] || '',
-          type: parts[2] || '',
-          section: parts[3] || '',
-          length: parseFloat(parts[4]) || 0,
-          qty: parseFloat(parts[5]) || 0,
-          kgm: parseFloat(parts[6]) || 0,
-          m2m: parseFloat(parts[7]) || 0,
-          confidence: parseInt(parts[8]) || 80,
-          flag: parts.slice(9).join(',').trim() || '',
-          notes: ''
+          dwg: parts[1] || '', type: parts[2] || '', section: parts[3] || '',
+          length: parseFloat(parts[4]) || 0, qty: parseFloat(parts[5]) || 0,
+          kgm: parseFloat(parts[6]) || 0, m2m: parseFloat(parts[7]) || 0,
+          confidence: parseInt(parts[8]) || 80, flag: parts.slice(9).join(',').trim() || '', notes: ''
         });
       } else if (type === 'COLD' && parts.length >= 6) {
         coldRolled.push({
-          dwg: parts[1] || '',
-          type: parts[2] || '',
-          section: parts[3] || '',
-          length: parseFloat(parts[4]) || 0,
-          qty: parseFloat(parts[5]) || 0,
-          kgm: parseFloat(parts[6]) || 0,
-          confidence: parseInt(parts[7]) || 80,
-          flag: parts.slice(8).join(',').trim() || '',
-          notes: ''
+          dwg: parts[1] || '', type: parts[2] || '', section: parts[3] || '',
+          length: parseFloat(parts[4]) || 0, qty: parseFloat(parts[5]) || 0,
+          kgm: parseFloat(parts[6]) || 0, confidence: parseInt(parts[7]) || 80,
+          flag: parts.slice(8).join(',').trim() || '', notes: ''
         });
       }
     }
