@@ -142,6 +142,8 @@ input[type=number]{text-align:right;}
   <div class="tab" id="tab-rates" onclick="switchTab('rates')">💷 Rates</div>
   <div class="tab" id="tab-hot" onclick="switchTab('hot')">🔥 Hot Rolled</div>
   <div class="tab" id="tab-cold" onclick="switchTab('cold')">❄ Cold Rolled</div>
+  <div style="flex:1"></div>
+  <button onclick="resetAll()" style="background:none;border:none;color:#e74c3c;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:11px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;border-left:1px solid var(--border);">↺ Reset</button>
 </div>
 <div class="content">
 
@@ -531,6 +533,20 @@ function applyRates(){
   setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color='';},2000);
 }
 function resetRates(){document.querySelectorAll('.rate-inp').forEach(i=>i.value='');}
+function resetAll(){
+  if(!confirm('Reset everything?\n\nThis will clear all members, rates and the project name.\n\nAre you sure?'))return;
+  hotRows=[];coldRows=[];nid=1;
+  for(let i=0;i<2;i++)hotRows.push(mkH());
+  coldRows.push(mkC());
+  document.getElementById('projName').value='';
+  document.getElementById('drawingScale').value='auto';
+  document.getElementById('drawingType').value='ga';
+  document.getElementById('progBox').style.display='none';
+  document.getElementById('resultBanner').className='result-banner';
+  resetRates();
+  renderHot();renderCold();
+  switchTab('pdf');
+}
 function calcQuickRate(){
   const supply=parseFloat(document.getElementById('q_supply').value)||0;
   const fab=parseFloat(document.getElementById('q_fab').value)||0;
