@@ -2,10 +2,12 @@
   "version": 2,
   "builds": [
     { "src": "analyse.js", "use": "@vercel/node" },
+    { "src": "compare.js", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/analyse", "dest": "/analyse.js" },
+    { "src": "/api/compare", "dest": "/compare.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
