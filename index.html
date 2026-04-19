@@ -194,6 +194,7 @@ input[type=number]{text-align:right;}
     <button onclick="saveEstimate()" title="Save estimate" style="background:#1a3a1a;color:var(--green);border:1px solid var(--green);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;" id="save-btn">💾 Save</button>
     <button onclick="showJobs()" title="Load estimate" style="background:var(--bg2);color:var(--accent);border:1px solid var(--accent);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;" id="jobs-btn">📂 Jobs</button>
     <button class="hdr-btn" onclick="exportCSV()" style="flex-shrink:0;padding:7px 14px;font-size:12px;">⬇ CSV</button>
+    <button onclick="generateQuote()" style="background:var(--crimson);color:#fff;border:none;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;">📄 Quote</button>
   </div>
 </header>
 <div class="summary">
@@ -1001,6 +1002,309 @@ function markSaved(){
   if(btn) btn.textContent = '💾 Save';
 }
 
+
+// ── QUOTE PDF GENERATOR ──
+function generateQuote(){
+  const proj = document.getElementById('projName').value || 'Untitled Project';
+  const today = new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'});
+  const validity = new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'});
+
+  // Gather totals
+  const hrRows = hotRows.filter(r=>r.section||r.type);
+  const crRows = coldRows.filter(r=>r.section||r.type);
+  const hrTotalKg = hrRows.reduce((s,r)=>s+calcH(r).kg, 0);
+  const hrTotalT = hrTotalKg/1000;
+  const hrTotalSA = hrRows.reduce((s,r)=>s+calcH(r).sa, 0);
+  const hrTotal = hrRows.reduce((s,r)=>s+calcH(r).total, 0);
+  const crTotalM = crRows.reduce((s,r)=>s+calcC(r).totalM, 0);
+  const crTotal = crRows.reduce((s,r)=>s+calcC(r).price, 0);
+  const grandTotal = hrTotal + crTotal;
+
+  // Build hot rolled table rows
+  const hrTableRows = hrRows.map(r=>{
+    const c=calcH(r);
+    return `<tr>
+      <td>${esc(r.dwg)||'—'}</td>
+      <td>${esc(r.type)}</td>
+      <td><strong>${esc(r.section)}</strong></td>
+      <td class="num">${r.length||0}</td>
+      <td class="num">${r.qty||0}</td>
+      <td class="num">${c.totalM.toFixed(2)}</td>
+      <td class="num">${(+r.kgm||0).toFixed(1)}</td>
+      <td class="num">${c.kg.toFixed(1)}</td>
+      <td class="num">${(+r.m2m||0).toFixed(3)}</td>
+      <td class="num">${c.sa.toFixed(2)}</td>
+      <td class="num">${r.rate?'£'+(+r.rate).toLocaleString():''}</td>
+      <td class="num money">${c.total>0?'£'+Math.round(c.total).toLocaleString():''}</td>
+    </tr>`;
+  }).join('');
+
+  // Build cold rolled table rows
+  const crTableRows = crRows.map(r=>{
+    const c=calcC(r);
+    return `<tr>
+      <td>${esc(r.dwg)||'—'}</td>
+      <td>${esc(r.type)}</td>
+      <td><strong>${esc(r.section)}</strong></td>
+      <td class="num">${r.length||0}</td>
+      <td class="num">${r.qty||0}</td>
+      <td class="num">${c.totalM.toFixed(2)}</td>
+      <td class="num">${(+r.kgm||0).toFixed(2)}</td>
+      <td class="num">${c.kg.toFixed(1)}</td>
+      <td class="num">${r.rate?'£'+(+r.rate||0).toFixed(2):''}</td>
+      <td class="num money">${c.price>0?'£'+Math.round(c.price).toLocaleString():''}</td>
+    </tr>`;
+  }).join('');
+
+  // Section prices from rate book
+  let sectionPriceRows = '';
+  let sectionTotal = 0;
+  hrRows.forEach(r=>{
+    const p = lookupHR(r.section);
+    if(p){
+      const [kgm,m2m,rate,dispSec,cat]=p;
+      const c=calcH(r);
+      const totalKg=c.kg;
+      const matCost=(totalKg/1000)*rate;
+      sectionTotal+=matCost;
+      sectionPriceRows+=`<tr>
+        <td><strong>${esc(r.section||dispSec)}</strong></td>
+        <td>${esc(r.type)}</td>
+        <td>${cat}</td>
+        <td class="num">${(kgm||+r.kgm||0).toFixed(1)}</td>
+        <td class="num">£${rate.toLocaleString()}/T</td>
+        <td class="num">${c.totalM.toFixed(2)}m</td>
+        <td class="num">${totalKg.toFixed(1)}kg</td>
+        <td class="num money">£${Math.round(matCost).toLocaleString()}</td>
+      </tr>`;
+    }
+  });
+
+  // Quick rates breakdown
+  const supply=parseFloat(document.getElementById('q_supply')?.value)||0;
+  const fab=parseFloat(document.getElementById('q_fab')?.value)||0;
+  const erect=parseFloat(document.getElementById('q_erect')?.value)||0;
+  const galv=parseFloat(document.getElementById('q_galv')?.value)||0;
+  const paint=parseFloat(document.getElementById('q_paint')?.value)||0;
+  const conn=parseFloat(document.getElementById('q_conn')?.value)||0;
+  const totalRate=supply+fab+erect+galv+paint+conn;
+  const hasRates = totalRate > 0;
+
+  const quoteHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>R&L Estimate — ${esc(proj)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;font-size:10px;color:#1a2332;background:#fff;padding:20px;}
+  
+  /* HEADER */
+  .hdr{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:16px;border-bottom:3px solid #c0182e;margin-bottom:20px;}
+  .logo-rl{font-family:Georgia,serif;font-size:36px;color:#c0182e;font-style:italic;line-height:1;}
+  .logo-sub{font-size:8px;color:#c8961a;letter-spacing:3px;text-transform:uppercase;margin-top:2px;}
+  .logo-est{font-size:7px;color:#999;letter-spacing:1px;margin-top:1px;}
+  .hdr-right{text-align:right;font-size:9px;color:#555;line-height:1.6;}
+  .hdr-right strong{color:#1a2332;font-size:11px;}
+  
+  /* PROJECT INFO */
+  .proj-box{background:#f8f6f2;border-left:4px solid #c0182e;padding:10px 14px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .proj-item label{font-size:8px;color:#999;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px;}
+  .proj-item strong{font-size:11px;color:#1a2332;}
+  
+  /* SUMMARY BOXES */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;}
+  .sum-box{border:1px solid #e0ddd6;border-radius:4px;padding:10px;text-align:center;}
+  .sum-box label{font-size:8px;color:#999;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;}
+  .sum-box .val{font-size:16px;font-weight:bold;color:#1a2332;}
+  .sum-box.total .val{color:#2ecc71;font-size:18px;}
+  
+  /* SECTION TITLES */
+  .sec-hdr{background:#1a2332;color:#fff;padding:6px 10px;font-size:10px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:0;margin-top:16px;}
+  .sec-hdr.hot{background:#c0182e;}
+  .sec-hdr.cold{background:#2a7ae0;}
+  .sec-hdr.prices{background:#1d6b4e;}
+  .sec-hdr.rates{background:#856404;}
+  
+  /* TABLES */
+  table{width:100%;border-collapse:collapse;margin-bottom:4px;}
+  thead th{background:#f0ede8;padding:5px 4px;font-size:8px;font-weight:bold;text-align:left;border-bottom:1px solid #d0cdc8;text-transform:uppercase;letter-spacing:0.5px;}
+  thead th.num{text-align:right;}
+  tbody td{padding:4px 4px;font-size:9px;border-bottom:1px solid #f0ede8;vertical-align:middle;}
+  tbody td.num{text-align:right;}
+  tbody td.money{font-weight:bold;color:#1a6b3a;}
+  tbody tr:nth-child(even){background:#fafafa;}
+  tfoot td{padding:5px 4px;font-size:9px;font-weight:bold;border-top:2px solid #1a2332;background:#f0ede8;}
+  tfoot td.money{color:#1a6b3a;font-size:11px;}
+  tfoot td.num{text-align:right;}
+  
+  /* RATES TABLE */
+  .rates-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:4px;}
+  .rate-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ede8;font-size:9px;}
+  .rate-row .rate-name{color:#555;}
+  .rate-row .rate-val{font-weight:bold;}
+  .rate-total-row{display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid #1a2332;font-size:10px;font-weight:bold;margin-top:4px;}
+  
+  /* GRAND TOTAL */
+  .grand-total-box{background:#1a2332;color:#fff;padding:14px 20px;margin-top:20px;display:flex;justify-content:space-between;align-items:center;border-radius:4px;}
+  .gt-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.7;}
+  .gt-val{font-size:24px;font-weight:bold;color:#2ecc71;}
+  .gt-sub{font-size:9px;opacity:.6;margin-top:2px;}
+  
+  /* FOOTER */
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e0ddd6;display:flex;justify-content:space-between;font-size:8px;color:#999;}
+  .validity{background:#fff8e6;border:1px solid #c8961a;border-radius:3px;padding:6px 10px;font-size:9px;color:#856404;margin-top:12px;}
+  
+  @media print{
+    body{padding:10px;}
+    .no-print{display:none!important;}
+    @page{margin:15mm;size:A4 landscape;}
+  }
+  
+  .print-btn{position:fixed;bottom:20px;right:20px;background:#c0182e;color:#fff;border:none;border-radius:6px;padding:12px 20px;font-size:13px;font-weight:bold;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Save as PDF</button>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <div class="logo-rl">Reynolds &amp; Litchfield</div>
+    <div class="logo-sub">Constructional Engineers</div>
+    <div class="logo-est">Established 1960</div>
+  </div>
+  <div class="hdr-right">
+    <strong>STEEL ESTIMATE</strong><br>
+    Date: ${today}<br>
+    Ref: RL-${Date.now().toString().slice(-6)}
+  </div>
+</div>
+
+<!-- PROJECT INFO -->
+<div class="proj-box">
+  <div class="proj-item"><label>Project</label><strong>${esc(proj)}</strong></div>
+  <div class="proj-item"><label>Date Issued</label><strong>${today}</strong></div>
+  <div class="proj-item"><label>Valid Until</label><strong>${validity}</strong></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary">
+  <div class="sum-box"><label>Hot Rolled</label><div class="val">${hrTotalT.toFixed(3)}T</div></div>
+  <div class="sum-box"><label>Surface Area</label><div class="val">${hrTotalSA.toFixed(1)}m²</div></div>
+  <div class="sum-box"><label>Cold Rolled</label><div class="val">${crTotalM.toFixed(1)}m</div></div>
+  <div class="sum-box total"><label>Grand Total</label><div class="val">£${Math.round(grandTotal).toLocaleString()}</div></div>
+</div>
+
+${hrRows.length > 0 ? `
+<!-- HOT ROLLED -->
+<div class="sec-hdr hot">🔥 Hot Rolled Steel Take-Off</div>
+<table>
+  <thead><tr>
+    <th>Dwg</th><th>Type</th><th>Section</th>
+    <th class="num">Length<br>mm</th><th class="num">Qty</th>
+    <th class="num">Total m</th><th class="num">Kg/m</th>
+    <th class="num">Total Kg</th><th class="num">M²/m</th>
+    <th class="num">Surface m²</th><th class="num">Rate</th>
+    <th class="num">Total £</th>
+  </tr></thead>
+  <tbody>${hrTableRows}</tbody>
+  <tfoot><tr>
+    <td colspan="7">TOTALS</td>
+    <td class="num">${hrTotalKg.toFixed(1)}</td>
+    <td></td>
+    <td class="num">${hrTotalSA.toFixed(2)}</td>
+    <td></td>
+    <td class="num money">£${Math.round(hrTotal).toLocaleString()}</td>
+  </tr></tfoot>
+</table>` : ''}
+
+${crRows.length > 0 ? `
+<!-- COLD ROLLED -->
+<div class="sec-hdr cold">❄ Cold Rolled (Metsec) Take-Off</div>
+<table>
+  <thead><tr>
+    <th>Dwg</th><th>Type</th><th>Section</th>
+    <th class="num">Length mm</th><th class="num">Qty</th>
+    <th class="num">Total m</th><th class="num">Kg/m</th>
+    <th class="num">Weight Kg</th><th class="num">Rate £/m</th>
+    <th class="num">Price £</th>
+  </tr></thead>
+  <tbody>${crTableRows}</tbody>
+  <tfoot><tr>
+    <td colspan="5">TOTALS</td>
+    <td class="num">${crTotalM.toFixed(2)}m</td>
+    <td></td>
+    <td></td><td></td>
+    <td class="num money">£${Math.round(crTotal).toLocaleString()}</td>
+  </tr></tfoot>
+</table>` : ''}
+
+${sectionPriceRows ? `
+<!-- SECTION PRICES -->
+<div class="sec-hdr prices">📋 Section Material Prices (R&L Rate Book)</div>
+<table>
+  <thead><tr>
+    <th>Section</th><th>Type</th><th>Category</th>
+    <th class="num">Kg/m</th><th class="num">Rate</th>
+    <th class="num">Total m</th><th class="num">Weight Kg</th>
+    <th class="num">Material £</th>
+  </tr></thead>
+  <tbody>${sectionPriceRows}</tbody>
+  <tfoot><tr>
+    <td colspan="7">TOTAL MATERIAL COST</td>
+    <td class="num money">£${Math.round(sectionTotal).toLocaleString()}</td>
+  </tr></tfoot>
+</table>` : ''}
+
+${hasRates ? `
+<!-- QUICK RATES -->
+<div class="sec-hdr rates">💷 Rate Breakdown — ${hrTotalT.toFixed(3)} Tonnes Hot Rolled</div>
+<div class="rates-grid">
+  <div>
+    ${supply?`<div class="rate-row"><span class="rate-name">Supply £/T</span><span class="rate-val">£${supply.toLocaleString()}/T = £${Math.round(hrTotalT*supply).toLocaleString()}</span></div>`:''}
+    ${fab?`<div class="rate-row"><span class="rate-name">Fabricate £/T</span><span class="rate-val">£${fab.toLocaleString()}/T = £${Math.round(hrTotalT*fab).toLocaleString()}</span></div>`:''}
+    ${erect?`<div class="rate-row"><span class="rate-name">Erect £/T</span><span class="rate-val">£${erect.toLocaleString()}/T = £${Math.round(hrTotalT*erect).toLocaleString()}</span></div>`:''}
+  </div>
+  <div>
+    ${galv?`<div class="rate-row"><span class="rate-name">Galvanise £/T</span><span class="rate-val">£${galv.toLocaleString()}/T = £${Math.round(hrTotalT*galv).toLocaleString()}</span></div>`:''}
+    ${paint?`<div class="rate-row"><span class="rate-name">Paint £/T</span><span class="rate-val">£${paint.toLocaleString()}/T = £${Math.round(hrTotalT*paint).toLocaleString()}</span></div>`:''}
+    ${conn?`<div class="rate-row"><span class="rate-name">Connections £/T</span><span class="rate-val">£${conn.toLocaleString()}/T = £${Math.round(hrTotalT*conn).toLocaleString()}</span></div>`:''}
+  </div>
+</div>
+<div class="rate-total-row"><span>TOTAL RATE</span><span>£${totalRate.toLocaleString()}/T × ${hrTotalT.toFixed(3)}T = £${Math.round(hrTotalT*totalRate).toLocaleString()}</span></div>
+` : ''}
+
+<!-- GRAND TOTAL -->
+<div class="grand-total-box">
+  <div>
+    <div class="gt-label">Grand Total — ${esc(proj)}</div>
+    <div class="gt-sub">Hot rolled + Cold rolled · ${today}</div>
+  </div>
+  <div class="gt-val">£${Math.round(grandTotal).toLocaleString()}</div>
+</div>
+
+<!-- VALIDITY -->
+<div class="validity">
+  ⚠️ This estimate is valid for 30 days from the date of issue (until ${validity}). Prices are subject to change after this date. This estimate is based on the information provided and may be subject to revision upon receipt of full drawings and specification.
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div>Reynolds &amp; Litchfield Ltd · Constructional Engineers · Established 1960</div>
+  <div>Generated by R&L Estimator · ${today}</div>
+</div>
+
+</body>
+</html>`;
+
+  // Open in new window for printing/saving as PDF
+  const win = window.open('', '_blank');
+  win.document.write(quoteHtml);
+  win.document.close();
+}
 for(let i=0;i<2;i++)hotRows.push(mkH());
   coldRows.push(mkC());
   document.getElementById('projName').value='';
