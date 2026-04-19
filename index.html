@@ -1842,5 +1842,9 @@ for(let i=0;i<2;i++)hotRows.push(mkH());
 coldRows.push(mkC());
 renderHot();renderCold();
 </script>
+<script>
+window.showApprovalIfNeeded=function(hr,cr){if(hr&&hr.length>0){hotRows=hr.map(d=>mkH(d));renderHot();}if(cr&&cr.length>0){coldRows=cr.map(d=>mkC(d));renderCold();}return false;};
+</script>
 </body>
 </html>
+
