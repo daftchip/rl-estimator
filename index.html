@@ -161,6 +161,25 @@ input[type=number]{text-align:right;}
 .rev-sum-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
 .rev-sum-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;}
 .rev-spinner{display:none;width:18px;height:18px;border:2px solid var(--border);border-top-color:#f59e0b;border-radius:50%;animation:spin .7s linear infinite;}
+
+/* Jobs modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:flex;align-items:flex-end;justify-content:center;}
+.modal-box{background:var(--bg2);border-radius:12px 12px 0 0;width:100%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;border-top:3px solid var(--accent);}
+.modal-hdr{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--accent);}
+.modal-close{background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px 8px;}
+.modal-body{flex:1;overflow-y:auto;padding:12px;}
+.job-card{background:var(--inp);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.job-card:hover{border-color:var(--accent);}
+.job-info{flex:1;min-width:0;}
+.job-name{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.job-meta{font-size:10px;color:var(--dim);margin-top:2px;}
+.job-actions{display:flex;gap:6px;flex-shrink:0;}
+.job-load-btn{background:var(--accent);color:#111;border:none;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:5px 10px;cursor:pointer;}
+.job-del-btn{background:none;border:1px solid var(--border);color:var(--dim);border-radius:4px;font-size:11px;padding:5px 8px;cursor:pointer;}
+.job-del-btn:hover{border-color:var(--red);color:var(--red);}
+.no-jobs{text-align:center;padding:30px;color:var(--dim);font-size:13px;}
+.unsaved-dot{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;margin-left:4px;vertical-align:middle;}
 </style>
 </head>
 <body>
@@ -171,7 +190,9 @@ input[type=number]{text-align:right;}
     <span class="brand-sub">Constructional Engineers &nbsp;·&nbsp; Established 1960</span>
   </div>
   <div class="hdr-bottom">
-    <input class="proj-input" type="text" id="projName" placeholder="Project / Tender name..." style="flex:1;width:auto;font-size:13px;padding:7px 12px;border-radius:4px;background:#f5f0ec;border:1px solid #ddd;color:#333;font-family:'Barlow',sans-serif;">
+    <input class="proj-input" type="text" id="projName" placeholder="Project / Tender name..." style="flex:1;width:auto;font-size:13px;padding:7px 12px;border-radius:4px;background:#f5f0ec;border:1px solid #ddd;color:#333;font-family:'Barlow',sans-serif;" onchange="markUnsaved()">
+    <button onclick="saveEstimate()" title="Save estimate" style="background:#1a3a1a;color:var(--green);border:1px solid var(--green);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;" id="save-btn">💾 Save</button>
+    <button onclick="showJobs()" title="Load estimate" style="background:var(--bg2);color:var(--accent);border:1px solid var(--accent);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;" id="jobs-btn">📂 Jobs</button>
     <button class="hdr-btn" onclick="exportCSV()" style="flex-shrink:0;padding:7px 14px;font-size:12px;">⬇ CSV</button>
   </div>
 </header>
@@ -516,6 +537,18 @@ input[type=number]{text-align:right;}
     <div class="content-pad"></div>
   </div>
 
+
+<!-- Jobs modal -->
+<div class="modal-bg" id="jobs-modal" style="display:none" onclick="if(event.target===this)closeJobs()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span class="modal-title">📂 Saved Jobs</span>
+      <button class="modal-close" onclick="closeJobs()">✕</button>
+    </div>
+    <div class="modal-body" id="jobs-list"></div>
+  </div>
+</div>
+
 </div>
 </div>
 <script>
@@ -524,7 +557,7 @@ function mkH(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.secti
 function mkC(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.section||'',length:d.length||'',qty:d.qty||'',kgm:d.kgm||'',rate:'',notes:d.notes||''};}
 function addRow(t){if(t==='hot'){hotRows.push(mkH());renderHot();}else{coldRows.push(mkC());renderCold();}}
 function delRow(t,id){if(t==='hot'){hotRows=hotRows.filter(r=>r.id!==id);renderHot();}else{coldRows=coldRows.filter(r=>r.id!==id);renderCold();}}
-function upd(t,id,f,v){const rows=t==='hot'?hotRows:coldRows;const r=rows.find(x=>x.id===id);if(r){r[f]=v;t==='hot'?renderHot():renderCold();}}
+function upd(t,id,f,v){const rows=t==='hot'?hotRows:coldRows;const r=rows.find(x=>x.id===id);if(r){r[f]=v;t==='hot'?renderHot():renderCold();markUnsaved();}}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
 function calcH(r){
   const len=+r.length||0,qty=+r.qty||0,kgm=+r.kgm||0,m2m=+r.m2m||0;
@@ -841,6 +874,133 @@ function applyRevBToTakeoff(){
   if(coldRolled.length > 0){ coldRows = coldRolled.map(d=>mkC(d)); renderCold(); }
   switchTab('hot');
 }
+
+// ── SAVE & LOAD ESTIMATES ──
+const JOBS_KEY = 'rl_jobs';
+
+function getJobs(){
+  try{ return JSON.parse(localStorage.getItem(JOBS_KEY)||'[]'); }
+  catch(e){ return []; }
+}
+
+function saveEstimate(){
+  const name = (document.getElementById('projName').value||'').trim();
+  if(!name){ alert('Please enter a project name first'); document.getElementById('projName').focus(); return; }
+  
+  const jobs = getJobs();
+  const existing = jobs.findIndex(j=>j.name===name);
+  
+  const job = {
+    name,
+    saved: new Date().toLocaleString('en-GB'),
+    hotRows: hotRows.map(r=>({...r})),
+    coldRows: coldRows.map(r=>({...r})),
+    rates: getRates()
+  };
+
+  if(existing >= 0){
+    if(!confirm(`Update existing job "${name}"?`)) return;
+    jobs[existing] = job;
+  } else {
+    jobs.unshift(job);
+  }
+
+  // Keep max 50 jobs
+  if(jobs.length > 50) jobs.pop();
+  
+  localStorage.setItem(JOBS_KEY, JSON.stringify(jobs));
+  
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '✅ Saved!';
+  btn.style.background = 'var(--green)';
+  btn.style.color = '#111';
+  setTimeout(()=>{ btn.textContent = '💾 Save'; btn.style.background = ''; btn.style.color = ''; }, 2000);
+  markSaved();
+}
+
+function getRates(){
+  const ids = ['r_uc_s275','r_uc_s355','r_ub_s275','r_ub_s355','r_rhs','r_chs','r_angles','r_hr_default',
+    'r_galv_light','r_galv_heavy','r_galv_default','r_erection',
+    'r_blast_prime','r_paint_3coat','r_intumescent_30','r_paint_default',
+    'r_zpurlin_light','r_zpurlin_med','r_zpurlin_heavy','r_crail_light','r_crail_med','r_eaves','r_cr_default',
+    'q_supply','q_fab','q_erect','q_galv','q_paint','q_conn'];
+  const r = {};
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) r[id]=el.value; });
+  return r;
+}
+
+function setRates(rates){
+  if(!rates) return;
+  Object.entries(rates).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.value=val; });
+}
+
+function loadJob(name){
+  const jobs = getJobs();
+  const job = jobs.find(j=>j.name===name);
+  if(!job) return;
+  
+  if(hotRows.filter(r=>r.section||r.type).length > 0){
+    if(!confirm(`Load "${name}"? This will replace your current take-off.`)) return;
+  }
+
+  document.getElementById('projName').value = job.name;
+  hotRows = (job.hotRows||[]).map(r=>({...r, id:nid++}));
+  coldRows = (job.coldRows||[]).map(r=>({...r, id:nid++}));
+  setRates(job.rates||{});
+  renderHot(); renderCold(); calcQuickRate();
+  closeJobs();
+  markSaved();
+  switchTab('hot');
+}
+
+function deleteJob(name){
+  if(!confirm(`Delete "${name}"?`)) return;
+  const jobs = getJobs().filter(j=>j.name!==name);
+  localStorage.setItem(JOBS_KEY, JSON.stringify(jobs));
+  renderJobsList();
+}
+
+function showJobs(){
+  renderJobsList();
+  document.getElementById('jobs-modal').style.display='flex';
+}
+
+function closeJobs(){
+  document.getElementById('jobs-modal').style.display='none';
+}
+
+function renderJobsList(){
+  const jobs = getJobs();
+  const el = document.getElementById('jobs-list');
+  if(!jobs.length){
+    el.innerHTML='<div class="no-jobs">No saved jobs yet.<br>Save your first estimate using the 💾 button.</div>';
+    return;
+  }
+  el.innerHTML = jobs.map(j=>{
+    const hrT = (j.hotRows||[]).reduce((s,r)=>s+(((+r.length||0)/1000)*(+r.qty||0)*(+r.kgm||0)),0)/1000;
+    const meta = `Saved ${j.saved} · ${hrT.toFixed(2)}T hot rolled · ${(j.hotRows||[]).length} members`;
+    return `<div class="job-card">
+      <div class="job-info">
+        <div class="job-name">${esc(j.name)}</div>
+        <div class="job-meta">${meta}</div>
+      </div>
+      <div class="job-actions">
+        <button class="job-load-btn" onclick="loadJob('${esc(j.name)}')">Load</button>
+        <button class="job-del-btn" onclick="deleteJob('${esc(j.name)}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function markUnsaved(){
+  const btn = document.getElementById('save-btn');
+  if(btn && !btn.textContent.includes('●')) btn.textContent = '💾 Save ●';
+}
+function markSaved(){
+  const btn = document.getElementById('save-btn');
+  if(btn) btn.textContent = '💾 Save';
+}
+
 for(let i=0;i<2;i++)hotRows.push(mkH());
   coldRows.push(mkC());
   document.getElementById('projName').value='';
