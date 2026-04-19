@@ -141,6 +141,26 @@ input[type=number]{text-align:right;}
 .no-match-badge{font-size:9px;background:rgba(231,76,60,0.2);color:var(--red);padding:2px 6px;border-radius:2px;margin-left:4px;}
 .match-badge{font-size:9px;background:rgba(16,185,129,0.15);color:#10b981;padding:2px 6px;border-radius:2px;margin-left:4px;}
 .prices-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;}
+
+.tab.a-revisions{color:#f59e0b;border-color:#f59e0b;}
+.rev-drop{border:2px dashed var(--border);border-radius:8px;background:var(--inp);padding:20px 16px;text-align:center;cursor:pointer;position:relative;transition:border-color .2s;}
+.rev-drop:hover{border-color:var(--accent);}
+.rev-drop input[type=file]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;}
+.rev-drop.loaded{border-color:var(--green);background:rgba(46,204,113,0.06);}
+.rev-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.rev-change{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:6px;margin-bottom:6px;font-size:12px;}
+.rev-change.added{background:rgba(46,204,113,0.1);border-left:3px solid var(--green);}
+.rev-change.removed{background:rgba(231,76,60,0.1);border-left:3px solid var(--red);}
+.rev-change.changed{background:rgba(240,165,0,0.1);border-left:3px solid var(--accent);}
+.rev-badge{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:1px;padding:2px 6px;border-radius:3px;flex-shrink:0;margin-top:1px;}
+.rev-badge.added{background:var(--green);color:#111;}
+.rev-badge.removed{background:var(--red);color:#fff;}
+.rev-badge.changed{background:var(--accent);color:#111;}
+.rev-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.rev-sum-card{background:var(--inp);border-radius:6px;padding:10px;text-align:center;}
+.rev-sum-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.rev-sum-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;}
+.rev-spinner{display:none;width:18px;height:18px;border:2px solid var(--border);border-top-color:#f59e0b;border-radius:50%;animation:spin .7s linear infinite;}
 </style>
 </head>
 <body>
@@ -166,6 +186,7 @@ input[type=number]{text-align:right;}
   <div class="tab" id="tab-hot" onclick="switchTab('hot')">🔥 Hot Rolled</div>
   <div class="tab" id="tab-cold" onclick="switchTab('cold')">❄ Cold Rolled</div>
   <div class="tab" id="tab-prices" onclick="switchTab('prices')">📋 Section Prices</div>
+  <div class="tab" id="tab-revisions" onclick="switchTab('revisions')">🔀 Revisions</div>
   <div style="flex:1"></div>
   <button onclick="resetAll()" style="background:none;border:none;color:#e74c3c;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:11px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;border-left:1px solid var(--border);">↺ Reset</button>
 </div>
@@ -412,6 +433,58 @@ input[type=number]{text-align:right;}
 
 
 
+  <div id="panel-revisions" class="hidden">
+    <div class="sec-title" style="color:#f59e0b">Revision Comparison <span class="badge" style="background:#f59e0b;color:#111">REV A vs REV B</span></div>
+    <div class="info-box" style="margin-bottom:12px">
+      <strong>Upload two drawing sets.</strong> AI will identify new steel, removed steel, size changes, length changes and calculate the cost difference between revisions.
+    </div>
+
+    <div class="rev-grid">
+      <!-- Rev A -->
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;">Previous Issue (Rev A)</div>
+        <div class="rev-drop" id="drop-a">
+          <input type="file" accept=".pdf" onchange="loadRevFile('a', event)">
+          <div style="font-size:28px;margin-bottom:6px">📄</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--dim)">TAP TO UPLOAD REV A</div>
+          <div id="drop-a-name" style="font-size:11px;color:var(--dim);margin-top:4px">Original drawing</div>
+        </div>
+      </div>
+      <!-- Rev B -->
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;">New Issue (Rev B)</div>
+        <div class="rev-drop" id="drop-b">
+          <input type="file" accept=".pdf" onchange="loadRevFile('b', event)">
+          <div style="font-size:28px;margin-bottom:6px">📄</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--dim)">TAP TO UPLOAD REV B</div>
+          <div id="drop-b-name" style="font-size:11px;color:var(--dim);margin-top:4px">Latest drawing</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compare button -->
+    <button id="compare-btn" onclick="compareRevisions()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#111;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:2px;text-transform:uppercase;padding:12px;width:100%;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:10px;" disabled>
+      <div class="rev-spinner" id="rev-spinner"></div>
+      <span id="compare-btn-text">Upload both drawings to compare</span>
+    </button>
+
+    <!-- Results -->
+    <div id="rev-results" style="display:none">
+      <div class="rev-summary">
+        <div class="rev-sum-card"><div class="rev-sum-label">Added</div><div class="rev-sum-val" id="rv-added" style="color:var(--green)">0</div></div>
+        <div class="rev-sum-card"><div class="rev-sum-label">Removed</div><div class="rev-sum-val" id="rv-removed" style="color:var(--red)">0</div></div>
+        <div class="rev-sum-card"><div class="rev-sum-label">Changed</div><div class="rev-sum-val" id="rv-changed" style="color:var(--accent)">0</div></div>
+        <div class="rev-sum-card"><div class="rev-sum-label">Cost Diff</div><div class="rev-sum-val" id="rv-cost" style="color:var(--green)">£0</div></div>
+      </div>
+      <div id="rv-changes-list"></div>
+      <button onclick="applyRevBToTakeoff()" id="apply-rev-btn" style="background:#1a3a1a;color:var(--green);border:1px solid var(--green);font-size:12px;padding:10px;border-radius:4px;width:100%;margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:none">
+        ✔ Apply Rev B Members to Take-Off
+      </button>
+    </div>
+
+    <div class="content-pad"></div>
+  </div>
+
   <div id="panel-prices" class="hidden">
     <div class="sec-title" style="color:#10b981">Section Prices <span class="badge" style="background:#10b981;color:#fff">YOUR R&L RATES</span></div>
     <div class="price-summary">
@@ -553,7 +626,7 @@ function updateSummary(){
   document.getElementById('s-total').textContent='£'+Math.round(hrT+crT).toLocaleString();
 }
 function switchTab(tab){
-  ['pdf','rates','hot','cold','prices'].forEach(t=>{
+  ['pdf','rates','hot','cold','prices','revisions'].forEach(t=>{
     const p=document.getElementById('panel-'+t);
     const tb=document.getElementById('tab-'+t);
     if(p)p.classList.toggle('hidden',t!==tab);
@@ -660,6 +733,114 @@ function renderPrices(){
   document.getElementById('sp-total').textContent='£'+Math.round(totalMat).toLocaleString();
 }
 
+
+// ── REVISION COMPARISON ──
+let revFiles = {a: null, b: null};
+
+function loadRevFile(rev, e){
+  const f = e.target.files[0];
+  if(!f) return;
+  revFiles[rev] = f;
+  const drop = document.getElementById('drop-'+rev);
+  const name = document.getElementById('drop-'+rev+'-name');
+  drop.classList.add('loaded');
+  name.textContent = f.name;
+  name.style.color = 'var(--green)';
+  // Enable compare button if both loaded
+  const btn = document.getElementById('compare-btn');
+  if(revFiles.a && revFiles.b){
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    document.getElementById('compare-btn-text').textContent = '🔀 Compare Revisions';
+  }
+}
+
+async function compareRevisions(){
+  if(!revFiles.a || !revFiles.b) return;
+  const btn = document.getElementById('compare-btn');
+  const spinner = document.getElementById('rev-spinner');
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  document.getElementById('compare-btn-text').textContent = 'Analysing drawings...';
+  document.getElementById('rev-results').style.display = 'none';
+
+  try{
+    const [b64a, b64b] = await Promise.all([toB64(revFiles.a), toB64(revFiles.b)]);
+
+    const resp = await fetch('/api/compare', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({revA: b64a, revB: b64b})
+    });
+
+    const rawText = await resp.text();
+    if(!rawText) throw new Error('Empty response');
+    let data;
+    try{ data = JSON.parse(rawText); } catch(e){ throw new Error('Server error: '+rawText.slice(0,200)); }
+    if(!resp.ok || data.error) throw new Error(data.error || 'Server error '+resp.status);
+
+    displayRevResults(data);
+  } catch(err){
+    document.getElementById('compare-btn-text').textContent = '❌ ' + err.message;
+    btn.disabled = false;
+  }
+  spinner.style.display = 'none';
+  btn.disabled = false;
+}
+
+function displayRevResults(data){
+  const {added=[], removed=[], changed=[], costDiff=0, revBMembers=[]} = data;
+  
+  document.getElementById('rv-added').textContent = added.length;
+  document.getElementById('rv-removed').textContent = removed.length;
+  document.getElementById('rv-changed').textContent = changed.length;
+  const cd = Math.round(costDiff);
+  document.getElementById('rv-cost').textContent = (cd>=0?'+':'') + '£'+Math.abs(cd).toLocaleString();
+  document.getElementById('rv-cost').style.color = cd>=0 ? 'var(--green)' : 'var(--red)';
+
+  let html = '';
+  added.forEach(m=>{
+    html += `<div class="rev-change added">
+      <span class="rev-badge added">ADDED</span>
+      <div><strong style="color:var(--green)">${esc(m.section)}</strong> — ${esc(m.type)}<br>
+      <span style="color:var(--dim)">${m.qty}no × ${m.length}mm${m.notes?' · '+esc(m.notes):''}</span></div>
+    </div>`;
+  });
+  removed.forEach(m=>{
+    html += `<div class="rev-change removed">
+      <span class="rev-badge removed">REMOVED</span>
+      <div><strong style="color:var(--red)">${esc(m.section)}</strong> — ${esc(m.type)}<br>
+      <span style="color:var(--dim)">${m.qty}no × ${m.length}mm${m.notes?' · '+esc(m.notes):''}</span></div>
+    </div>`;
+  });
+  changed.forEach(m=>{
+    html += `<div class="rev-change changed">
+      <span class="rev-badge changed">CHANGED</span>
+      <div><strong style="color:var(--accent)">${esc(m.section)}</strong> — ${esc(m.type)}<br>
+      <span style="color:var(--dim)">${esc(m.change)}</span></div>
+    </div>`;
+  });
+
+  if(!html) html = '<div style="padding:20px;text-align:center;color:var(--green)">✅ No changes detected between revisions</div>';
+
+  document.getElementById('rv-changes-list').innerHTML = html;
+  document.getElementById('rev-results').style.display = 'block';
+  document.getElementById('compare-btn-text').textContent = '🔀 Compare Again';
+
+  // Show apply button if there are Rev B members
+  if(revBMembers && revBMembers.length > 0){
+    window._revBMembers = revBMembers;
+    document.getElementById('apply-rev-btn').style.display = 'block';
+  }
+}
+
+function applyRevBToTakeoff(){
+  if(!window._revBMembers) return;
+  const {hotRolled=[], coldRolled=[]} = window._revBMembers;
+  if(hotRolled.length > 0){ hotRows = hotRolled.map(d=>mkH(d)); renderHot(); }
+  if(coldRolled.length > 0){ coldRows = coldRolled.map(d=>mkC(d)); renderCold(); }
+  switchTab('hot');
+}
 for(let i=0;i<2;i++)hotRows.push(mkH());
   coldRows.push(mkC());
   document.getElementById('projName').value='';
