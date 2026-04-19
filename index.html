@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="R&L Est.">
 <title>R&L Estimator</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&family=Great+Vibes&family=Cormorant+SC:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#1a2332;--bg2:#243044;--bg3:#2e3f5c;
@@ -21,9 +21,9 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;overflow:hidden;}
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
 header{background:#fff;border-bottom:3px solid var(--crimson);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:58px;}
-.brand-logo{display:flex;flex-direction:column;line-height:1;}
-.brand-rl{font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:30px;color:var(--crimson);letter-spacing:1px;}
-.brand-sub{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:8px;color:var(--gold);letter-spacing:3.5px;text-transform:uppercase;margin-top:1px;}
+.brand-logo{display:flex;flex-direction:column;line-height:1;justify-content:center;}
+.brand-rl{font-family:'Great Vibes',cursive;font-weight:400;font-size:26px;color:var(--crimson);letter-spacing:0.5px;line-height:1.1;}
+.brand-sub{font-family:'Cormorant SC','Barlow Condensed',sans-serif;font-weight:600;font-size:7px;color:var(--gold);letter-spacing:2.5px;text-transform:uppercase;margin-top:0px;}
 .proj-input{background:#f5f0ec;border:1px solid #ddd;color:#333;font-family:'Barlow',sans-serif;font-size:12px;padding:5px 8px;border-radius:4px;width:120px;text-align:center;}
 .proj-input:focus{outline:none;border-color:var(--crimson);}
 .hdr-btn{background:var(--crimson);color:#fff;border:none;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;}
@@ -126,8 +126,8 @@ input[type=number]{text-align:right;}
 <div id="app">
 <header>
   <div class="brand-logo">
-    <span class="brand-rl">R&amp;L</span>
-    <span class="brand-sub">Estimator</span>
+    <span class="brand-rl">Reynolds &amp; Litchfield</span>
+    <span class="brand-sub">Constructional Engineers · Estimator</span>
   </div>
   <input class="proj-input" type="text" id="projName" placeholder="Project name...">
   <button class="hdr-btn" onclick="exportCSV()">⬇ CSV</button>
