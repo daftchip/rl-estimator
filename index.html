@@ -198,6 +198,45 @@ input[type=number]{text-align:right;}
 
   <div id="panel-rates" class="hidden">
     <div class="sec-title">Rates Library <span class="badge badge-rates">YOUR RATES</span></div>
+
+    <!-- QUICK RATE CALCULATOR -->
+    <div id="quick-rate-box" style="background:linear-gradient(135deg,rgba(192,24,46,0.15),rgba(200,150,26,0.08));border:1px solid rgba(192,24,46,0.4);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--crimson,#c0182e);margin-bottom:10px;">⚡ Quick Rate — £ per Tonne</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Supply &amp; Fabricate £/T</div>
+          <input type="number" id="q_supply" placeholder="e.g. 1100" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Erect £/T</div>
+          <input type="number" id="q_erect" placeholder="e.g. 250" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Galvanise £/T</div>
+          <input type="number" id="q_galv" placeholder="e.g. 650" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Paint £/T</div>
+          <input type="number" id="q_paint" placeholder="e.g. 150" onchange="calcQuickRate()" style="background:var(--inp);border:1px solid var(--border);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;padding:8px;border-radius:4px;width:100%;text-align:right;-webkit-appearance:none;">
+        </div>
+      </div>
+      <div style="background:var(--inp);border-radius:6px;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;">Total Tonnes</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--hot)" id="qr-tonnes">0.000</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;">Rate £/T</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--accent)" id="qr-rate">£0</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;">Total £</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;color:var(--green)" id="qr-total">£0</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-top:8px;text-align:center;">Updates automatically from Hot Rolled take-off tonnage</div>
+    </div>
+
     <div class="rate-card">
       <div class="rate-hdr hot">🔥 Hot Rolled Steel</div>
       <div class="rate-row"><span class="rate-name">UC Columns (S275)</span><span class="rate-unit">£/T</span><input class="rate-inp" type="number" id="r_uc_s275" placeholder="0"></div>
@@ -440,6 +479,7 @@ function switchTab(tab){
     if(p)p.classList.toggle('hidden',t!==tab);
     if(tb)tb.className='tab'+(t===tab?' a-'+t:'');
   });
+  if(tab==='rates')calcQuickRate();
 }
 function gv(id){return parseFloat(document.getElementById(id)?.value)||0;}
 function matchH(row){
@@ -469,6 +509,18 @@ function applyRates(){
   setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color='';},2000);
 }
 function resetRates(){document.querySelectorAll('.rate-inp').forEach(i=>i.value='');}
+function calcQuickRate(){
+  const supply=parseFloat(document.getElementById('q_supply').value)||0;
+  const erect=parseFloat(document.getElementById('q_erect').value)||0;
+  const galv=parseFloat(document.getElementById('q_galv').value)||0;
+  const paint=parseFloat(document.getElementById('q_paint').value)||0;
+  const totalRate=supply+erect+galv+paint;
+  const tonnes=hotRows.reduce((s,r)=>s+calcH(r).kg,0)/1000;
+  const total=tonnes*totalRate;
+  document.getElementById('qr-tonnes').textContent=tonnes.toFixed(3);
+  document.getElementById('qr-rate').textContent='£'+Math.round(totalRate).toLocaleString();
+  document.getElementById('qr-total').textContent='£'+Math.round(total).toLocaleString();
+}
 function handleFile(e){
   const f=e.target.files[0];
   if(!f)return;
