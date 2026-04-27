@@ -9,5 +9,15 @@
     { "src": "/api/analyse", "dest": "/analyse.js" },
     { "src": "/api/compare", "dest": "/compare.js" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "analyse.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "compare.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  }
 }
