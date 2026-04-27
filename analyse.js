@@ -1,3 +1,4 @@
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -10,12 +11,10 @@ export default async function handler(req, res) {
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file — please upload a PDF drawing' });
 
-  // Check base64 size — Vercel limit is ~4.5MB request body
-  // base64 is ~33% larger than original, so 15MB PDF = ~20MB base64
   const approxMB = (pdfBase64.length * 0.75) / (1024 * 1024);
   if (approxMB > 15) {
-    return res.status(400).json({ 
-      error: `PDF is too large (approx ${Math.round(approxMB)}MB). Please upload individual drawing sheets rather than combined drawing packages. Maximum size is 15MB.`
+    return res.status(400).json({
+      error: `PDF is too large (approx ${Math.round(approxMB)}MB). Please split the drawing package and upload one sheet at a time. Maximum size is 15MB.`
     });
   }
 
