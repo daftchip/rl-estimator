@@ -1,5 +1,4 @@
-
-javascriptexport default async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -10,6 +9,15 @@ javascriptexport default async function handler(req, res) {
   if (!pdfBase64) return res.status(400).json({ error: 'No PDF data provided' });
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file — please upload a PDF drawing' });
+
+  // Check base64 size — Vercel limit is ~4.5MB request body
+  // base64 is ~33% larger than original, so 15MB PDF = ~20MB base64
+  const approxMB = (pdfBase64.length * 0.75) / (1024 * 1024);
+  if (approxMB > 15) {
+    return res.status(400).json({ 
+      error: `PDF is too large (approx ${Math.round(approxMB)}MB). Please upload individual drawing sheets rather than combined drawing packages. Maximum size is 15MB.`
+    });
+  }
 
   const scaleStr = scale && scale !== 'auto' ? scale : 'unknown — look for scale bar or text on drawing';
 
@@ -60,7 +68,6 @@ GALVANISED ITEMS:
 - Perimeter channels, ground beams, base angles often galvanised
 - Mark in notes field: "galvanised"
 - List separately from non-galvanised steelwork
-- Common galv items: perimeter PFC channels, RSA angles to base of columns
 
 SECTION SIZES:
 - Read member schedule or key on drawing
@@ -82,11 +89,9 @@ NEVER DOUBLE COUNT:
 - If member appears on plan AND elevation — count once from plan
 
 COLD ROLLED — CALCULATE FROM DRAWING:
-
-READ FROM DRAWING:
 - Purlin section (e.g. 202Z18) and spacing (e.g. 1800 max centres)
 - Rail section (e.g. 202C15) and spacing (e.g. 2000 max centres)
-- Rail levels shown on elevation (e.g. +0.170, +2.170, +4.170, +6.170, +6.950)
+- Rail levels shown on elevation (e.g. +0.170, +2.170, +4.170)
 - Eaves beam section (e.g. 230E25)
 
 CALCULATE PURLINS:
@@ -96,13 +101,12 @@ CALCULATE PURLINS:
 - End bays may differ — list separately
 
 CALCULATE CLADDING RAILS:
-- Count rail levels from elevation OR calculate ROUNDUP(eaves_height / spacing) + 1
+- Count rail levels from elevation
 - Total runs per elevation = rail levels x number of bays
 - List SEPARATELY per elevation grid
-- Show working in flag: e.g. "5 rail levels x 7 bays = 35 runs"
+- Show working in flag field
 
-EAVES BEAMS:
-- 1 per bay along each eave line, length = bay spacing
+EAVES BEAMS: 1 per bay along each eave, length = bay spacing
 
 OUTPUT FORMAT — Return ONLY CSV, no headers, no markdown:
 HOT,dwg_ref,member_type,section,length_mm,qty,kg_per_m,m2_per_m,confidence,flag
@@ -112,17 +116,14 @@ confidence: 95+=clearly stated, 80-94=mostly clear, 65-79=some inference, below 
 flag: reason if below 80, working for cold rolled, "galvanised" if galv, POSSIBLE DUPLICATE if repeated
 
 EXAMPLES:
-HOT,Plan PF1-7,Column,533*210*82UB,8310,12,82.2,1.8495,95,intermediate cols grids B-D
-HOT,Plan PF1-7,Column,305*165*40UB,8310,4,40.3,1.24124,95,corner cols grids A and E
+HOT,Plan PF1-7,Column,533*210*82UB,8310,12,82.2,1.8495,95,intermediate cols
 HOT,Plan PF1-7,Rafter,406*140*46UB,12080,12,46,1.3386,92,6 bays x2 sides
-HOT,Plan PF1-7,Haunch,406*140*46UB,1200,12,46,1.3386,92,1 per rafter end at eaves
+HOT,Plan PF1-7,Haunch,406*140*46UB,1200,12,46,1.3386,92,1 per rafter end
 HOT,Elev GL A,Bracing,CHS139.7*4,6905,2,13.4,0.439,88,diagonal varies per bay
-HOT,Elev GL A,Bracing,CHS139.7*4,7450,2,13.4,0.439,88,
 HOT,Plan,Galv Perimeter,PFC200*75,6000,5,23.4,0.6786,90,galvanised
-HOT,Plan,Galv Angle,RSA100*100*8,8310,8,12.2,0.390,90,galvanised to corner cols
-COLD,Cross section,Purlin,202Z18,6000,90,4.88,85,rafter 12080/1800crs=7/side x2 x7 bays=98
-COLD,Elev GL E,Cladding Rail,202C15,6000,19,4.09,88,5 rail levels x 7 bays less short sections
-COLD,Elev GL E,Eaves Beam,230E25,6000,10,8.47,90,1 per bay x2 eaves less ends
+COLD,Cross section,Purlin,202Z18,6000,90,4.88,85,rafter 12080/1800crs=7/side x2 x7 bays
+COLD,Elev GL E,Cladding Rail,202C15,6000,19,4.09,88,5 rail levels x 7 bays
+COLD,Elev GL E,Eaves Beam,230E25,6000,10,8.47,90,1 per bay
 
 Use 0 for unknown values. Include every member including small items.`;
 
