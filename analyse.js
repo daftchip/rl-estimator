@@ -1,4 +1,5 @@
-export default async function handler(req, res) {
+
+javascriptexport default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -13,98 +14,117 @@ export default async function handler(req, res) {
   const scaleStr = scale && scale !== 'auto' ? scale : 'unknown — look for scale bar or text on drawing';
 
   const typeDescriptions = {
-    ga: 'General Arrangement — shows overall layout. Members may appear in plan AND elevation — count each UNIQUE member ONCE only.',
-    framing: 'Framing Plan — each member shown is unique unless drawing shows multiple bays/frames.',
-    elevation: 'Elevation/Section — members here may already appear on GA — note the drawing reference.',
-    schedule: 'MEMBER SCHEDULE — this is the MASTER document. Extract exactly as listed. Do NOT skip any rows.',
-    detail: 'Detail Drawing — extract plates, cleats and misc steel only. Do NOT re-extract main members.'
+    ga: 'General Arrangement — shows overall layout. Members appear in plan AND elevation — count each UNIQUE member ONCE only using plan quantities.',
+    framing: 'Framing Plan — each member is unique unless multiple bays shown.',
+    elevation: 'Elevation/Section — note drawing ref. Members here may already be on GA.',
+    schedule: 'MEMBER SCHEDULE — this is the MASTER. Extract exactly as listed, every row.',
+    detail: 'Detail Drawing — extract connection plates, cleats, misc steel only.'
   };
   const typeDesc = typeDescriptions[drawingType||'ga'] || typeDescriptions.ga;
 
   const workTypeInstructions = {
-    new: `NEW BUILD — extract ALL steel members.`,
+    new: 'NEW BUILD — extract ALL steel members shown.',
     alteration: `ALTERATION/EXTENSION — NEW steel only.
-- INCLUDE: NEW, N, ADDITIONAL, TO BE PROVIDED, ADD., (N)
-- EXCLUDE: EXISTING, EX., EXIST., TO REMAIN, (E), dashed/greyed members`,
+INCLUDE: NEW, N, ADDITIONAL, TO BE PROVIDED, ADD., (N), solid/coloured lines
+EXCLUDE: EXISTING, EX., EXIST., TO REMAIN, (E), dashed/greyed`,
     demolition: `DEMOLITION — members to be REMOVED only.
-- INCLUDE: REMOVE, DEMOLISH, DEMO, TO BE REMOVED, (R), crossed-out members
-- EXCLUDE: all steel to remain, all new steel`,
-    all: `Extract ALL steel. Label notes field: NEW / EXISTING / REMOVE for each member.`
+INCLUDE: REMOVE, DEMOLISH, DEMO, TO BE REMOVED, (R), crossed out
+EXCLUDE: all steel to remain, all new steel`,
+    all: 'Extract ALL steel. Label each in notes as NEW / EXISTING / REMOVE.'
   };
   const workInstr = workTypeInstructions[workType||'new'] || workTypeInstructions.new;
 
-  const prompt = `You are a senior UK structural steel estimator with 30 years experience doing steel take-offs from engineering drawings.
+  const prompt = `You are a senior UK structural steel estimator working for Reynolds & Litchfield Ltd, constructional engineers established 1960. You have 30 years experience doing steel take-offs.
 
 DRAWING TYPE: ${typeDesc}
 DRAWING SCALE: ${scaleStr}
 WORK TYPE: ${workInstr}
 
-HOT ROLLED RULES:
+PORTAL FRAMES — HOW TO COUNT:
+- Count FRAMES from plan view (column grid lines), NOT from elevation
+- Label as PF1, PF2 etc in dwg field
+- Each frame = 2 columns + 2 rafters + haunches + ridge
+- Intermediate columns more common than corner — list separately by section
 
-1. NEVER DOUBLE-COUNT
-   - Member shown in plan AND elevation = count ONCE (use plan qty)
-   - If a member schedule exists on drawing, use IT as master
-   - "4No." or "x4" next to a member = that IS the quantity
-   - Portal frame: use plan quantity for columns not elevation
+HAUNCHES:
+- ALWAYS list haunches separately from rafters
+- Same section as rafter but shorter length (typically 1000-1500mm)
+- Qty = same as rafter qty (1 haunch per rafter end at eaves)
 
-2. DIMENSIONS — PRIORITY ORDER:
-   a) Read printed dimension text on drawing (e.g. "6000" or "6.0m")
-   b) Read from member schedule or table
-   c) Calculate: bays x bay width (e.g. "5 bays @ 6000mm")
-   d) Scale from drawing — LAST RESORT ONLY, set confidence below 65
+BRACING:
+- CHS bracing lengths VARY per bay — measure each diagonal separately
+- List per elevation grid: Elevation GL A, GL E, GL 1, GL 8 etc
+- Vertical bracing and horizontal wind girder are separate items
 
-3. SECTION SIZES:
-   - Read exact designation: 203x203x46UC, 457x191x82UB, 200x100x8RHS
-   - If only depth shown (e.g. "203UC") flag it
-   - Note grid ref in dwg field (e.g. "Grid A/1-2")
+GALVANISED ITEMS:
+- Perimeter channels, ground beams, base angles often galvanised
+- Mark in notes field: "galvanised"
+- List separately from non-galvanised steelwork
+- Common galv items: perimeter PFC channels, RSA angles to base of columns
 
-COLD ROLLED — CRITICAL:
+SECTION SIZES:
+- Read member schedule or key on drawing
+- UB: e.g. 406*140*46, 533*210*82, 305*165*40
+- UC: e.g. 203*203*46, 254*254*89
+- PFC: e.g. PFC200*75, PFC230*90
+- CHS: e.g. CHS139.7*4, CHS114.3*3.6
+- RSA: e.g. RSA100*100*8
 
-Cold rolled purlins and rails are often shown as lines on a roof/wall plan with NO individual labels.
-You MUST calculate quantities using the information on the drawing.
+DIMENSION READING (PRIORITY):
+1. Read printed dimension text on drawing
+2. Read from member schedule or notes
+3. Calculate from bay spacing x number of bays
+4. Scale from drawing — LAST RESORT, confidence below 65
 
-STEP 1 — FIND THESE VALUES:
-- Section size (e.g. 172Z19, 202Z25, 142C18)
-- Purlin spacing (e.g. "@ 1800 crs", "1800 max")
-- Rafter length (from elevation dimension)
-- Number of bays (count on plan)
-- Eaves height (for side rails)
-- Bay spacing (column centres)
+NEVER DOUBLE COUNT:
+- Plan qty = correct for columns and frames
+- Elevations show PROFILE — not additional members
+- If member appears on plan AND elevation — count once from plan
 
-STEP 2 — CALCULATE:
-ROOF PURLINS:
-- Purlins per rafter = ROUNDUP(rafter length / spacing) + 1
-- If symmetrical both sides: x2
-- Total runs = purlins per side x2 x number of bays
+COLD ROLLED — CALCULATE FROM DRAWING:
+
+READ FROM DRAWING:
+- Purlin section (e.g. 202Z18) and spacing (e.g. 1800 max centres)
+- Rail section (e.g. 202C15) and spacing (e.g. 2000 max centres)
+- Rail levels shown on elevation (e.g. +0.170, +2.170, +4.170, +6.170, +6.950)
+- Eaves beam section (e.g. 230E25)
+
+CALCULATE PURLINS:
+- purlins per rafter = ROUNDUP(rafter_length / spacing) + 1
+- Total runs = purlins per side x 2 x number of bays
 - Each run length = bay spacing
+- End bays may differ — list separately
 
-SIDE RAILS:
-- Rails per column = ROUNDUP(eaves height / spacing) + 1
-- Total runs = rails per column x2 sides x number of bays
-- Each run length = bay spacing
+CALCULATE CLADDING RAILS:
+- Count rail levels from elevation OR calculate ROUNDUP(eaves_height / spacing) + 1
+- Total runs per elevation = rail levels x number of bays
+- List SEPARATELY per elevation grid
+- Show working in flag: e.g. "5 rail levels x 7 bays = 35 runs"
 
 EAVES BEAMS:
-- 1 per bay per eave line
-- Length = bay spacing
+- 1 per bay along each eave line, length = bay spacing
 
-STEP 3 — SHOW WORKING in flag field:
-Example: "7200 rafter / 1800 crs = 5/side x2 x6 bays = 60 runs @ 6000mm"
-
-STEP 4 — ONE ROW PER SECTION SIZE grouping all same sections together.
-
-OUTPUT FORMAT — Return ONLY CSV, no headers, no explanation:
+OUTPUT FORMAT — Return ONLY CSV, no headers, no markdown:
 HOT,dwg_ref,member_type,section,length_mm,qty,kg_per_m,m2_per_m,confidence,flag
 COLD,dwg_ref,member_type,section,length_mm,qty,kg_per_m,confidence,flag
 
-EXAMPLES:
-HOT,GA-01 Grid1-2,Column,203x203x46UC,4500,4,46.1,0.808,95,
-HOT,GA-01,Rafter,457x152x52UB,7200,12,52.3,1.301,88,6 bays x2 sides
-HOT,GA-01,Bracing,100x100x8RHS,3200,6,22.7,0.600,72,length scaled
-COLD,GA-01,Purlin,172Z19,6000,60,3.49,88,7200mm rafter/1800crs=5/side x2 x6 bays=60
-COLD,GA-01,Side Rail,142C18,6000,42,2.84,85,4500mm eaves/1500crs=4/side x2 x6 bays=42
-COLD,GA-01,Eaves Beam,202Z25,6000,12,5.40,90,1 per bay x2 eaves x6 bays=12
+confidence: 95+=clearly stated, 80-94=mostly clear, 65-79=some inference, below 65=scaled/guessed
+flag: reason if below 80, working for cold rolled, "galvanised" if galv, POSSIBLE DUPLICATE if repeated
 
-Use 0 for any value you cannot determine. Include EVERY qualifying member.`;
+EXAMPLES:
+HOT,Plan PF1-7,Column,533*210*82UB,8310,12,82.2,1.8495,95,intermediate cols grids B-D
+HOT,Plan PF1-7,Column,305*165*40UB,8310,4,40.3,1.24124,95,corner cols grids A and E
+HOT,Plan PF1-7,Rafter,406*140*46UB,12080,12,46,1.3386,92,6 bays x2 sides
+HOT,Plan PF1-7,Haunch,406*140*46UB,1200,12,46,1.3386,92,1 per rafter end at eaves
+HOT,Elev GL A,Bracing,CHS139.7*4,6905,2,13.4,0.439,88,diagonal varies per bay
+HOT,Elev GL A,Bracing,CHS139.7*4,7450,2,13.4,0.439,88,
+HOT,Plan,Galv Perimeter,PFC200*75,6000,5,23.4,0.6786,90,galvanised
+HOT,Plan,Galv Angle,RSA100*100*8,8310,8,12.2,0.390,90,galvanised to corner cols
+COLD,Cross section,Purlin,202Z18,6000,90,4.88,85,rafter 12080/1800crs=7/side x2 x7 bays=98
+COLD,Elev GL E,Cladding Rail,202C15,6000,19,4.09,88,5 rail levels x 7 bays less short sections
+COLD,Elev GL E,Eaves Beam,230E25,6000,10,8.47,90,1 per bay x2 eaves less ends
+
+Use 0 for unknown values. Include every member including small items.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -155,13 +175,15 @@ Use 0 for any value you cannot determine. Include EVERY qualifying member.`;
           dwg: parts[1] || '', type: parts[2] || '', section: parts[3] || '',
           length: parseFloat(parts[4]) || 0, qty: parseFloat(parts[5]) || 0,
           kgm: parseFloat(parts[6]) || 0, m2m: parseFloat(parts[7]) || 0,
-          confidence: parseInt(parts[8]) || 80, flag: parts.slice(9).join(',').trim() || '', notes: ''
+          confidence: parseInt(parts[8]) || 80,
+          flag: parts.slice(9).join(',').trim() || '', notes: ''
         });
       } else if (type === 'COLD' && parts.length >= 6) {
         coldRolled.push({
           dwg: parts[1] || '', type: parts[2] || '', section: parts[3] || '',
           length: parseFloat(parts[4]) || 0, qty: parseFloat(parts[5]) || 0,
-          kgm: parseFloat(parts[6]) || 0, confidence: parseInt(parts[7]) || 80,
+          kgm: parseFloat(parts[6]) || 0,
+          confidence: parseInt(parts[7]) || 80,
           flag: parts.slice(8).join(',').trim() || '', notes: ''
         });
       }
