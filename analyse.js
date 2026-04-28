@@ -1,4 +1,3 @@
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -10,13 +9,6 @@ export default async function handler(req, res) {
   if (!pdfBase64) return res.status(400).json({ error: 'No PDF data provided' });
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file — please upload a PDF drawing' });
-
-  const approxMB = (pdfBase64.length * 0.75) / (1024 * 1024);
-  if (approxMB > 15) {
-    return res.status(400).json({
-      error: `PDF is too large (approx ${Math.round(approxMB)}MB). Please split the drawing package and upload one sheet at a time. Maximum size is 15MB.`
-    });
-  }
 
   const scaleStr = scale && scale !== 'auto' ? scale : 'unknown — look for scale bar or text on drawing';
 
