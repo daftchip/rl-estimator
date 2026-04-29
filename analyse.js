@@ -1,8 +1,8 @@
-jsexport const config = {
+jsimport { buffer } from 'node:stream/consumers';
+
+export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '20mb'
-    }
+    bodyParser: false
   }
 };
 
@@ -13,7 +13,15 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { pdfBase64, scale, drawingType, workType } = req.body || {};
+  let body;
+  try {
+    const buf = await buffer(req);
+    body = JSON.parse(buf.toString());
+  } catch (e) {
+    return res.status(400).json({ error: 'Failed to parse request body: ' + e.message });
+  }
+
+  const { pdfBase64, scale, drawingType, workType } = body || {};
   if (!pdfBase64) return res.status(400).json({ error: 'No PDF data provided' });
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file — please upload a PDF drawing' });
