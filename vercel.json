@@ -11,8 +11,8 @@
     }
   },
   "routes": [
-    { "src": "/api/analyse", "dest": "/analyse.js" },
-    { "src": "/api/compare", "dest": "/compare.js" },
+    { "src": "/api/analyse", "dest": "/api/analyse.js" },
+{ "src": "/api/compare", "dest": "/api/compare.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
