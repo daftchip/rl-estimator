@@ -1,11 +1,11 @@
 {
   "version": 2,
   "functions": {
-    "analyse.js": {
+    "api/analyse.js": {
       "maxDuration": 60,
       "memory": 1024
     },
-    "compare.js": {
+    "api/compare.js": {
       "maxDuration": 60,
       "memory": 1024
     }
