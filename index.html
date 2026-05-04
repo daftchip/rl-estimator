@@ -1774,11 +1774,7 @@ async function handleFiles(e){
   document.getElementById('resultText').innerHTML='<strong>Done!</strong> Found '+allHR.length+' hot rolled + '+allCR.length+' cold rolled members from '+files.length+' drawings.'+(errors.length?'<br><span style="color:var(--accent)">⚠ '+errors.join(', ')+'</span>':'');
   setTimeout(()=>{if(allHR.length>0)switchTab('hot');else switchTab('cold');},1500);
 }
-  const f=e.target.files[0];
-  if(!f)return;
-  processFile(f);
-}
-function toB64(file){
+  function toB64(file){
   return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>res(r.result.split(',')[1]);
