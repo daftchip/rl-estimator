@@ -131,4 +131,61 @@ content: [
 ]
 }]
 })
+});const respText = await response.text();
+if (!response.ok) {
+  let errMsg = 'API error ' + response.status;
+  try { const e = JSON.parse(respText); errMsg = e.error?.message || errMsg; } catch(_) {}
+  return res.status(502).json({ error: errMsg });
+}
+
+let data;
+try { data = JSON.parse(respText); }
+catch(e) { return res.status(502).json({ error: 'Invalid response from AI service' }); }
+
+if (data.type === 'error') return res.status(502).json({ error: data.error?.message || 'AI error' });
+
+const raw = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+if (!raw) return res.status(502).json({ error: 'No response from AI' });
+
+const hotRolled = [];
+const coldRolled = [];
+const lines = raw.split('\n').map(l => l.trim()).filter(l => l.startsWith('HOT,') || l.startsWith('COLD,'));
+
+for (const line of lines) {
+  const parts = line.split(',').map(p => p.trim());
+  const type = parts[0];
+  if (type === 'HOT' && parts.length >= 7) {
+    hotRolled.push({
+      dwg: parts[1] || '', type: parts[2] || '', section: parts[3] || '',
+      length: parseFloat(parts[4]) || 0, qty: parseFloat(parts[5]) || 0,
+      kgm: parseFloat(parts[6]) || 0, m2m: parseFloat(parts[7]) || 0,
+      confidence: parseInt(parts[8]) || 80,
+      flag: parts.slice(9).join(',').trim() || '', notes: ''
+    });
+  } else if (type === 'COLD' && parts.length >= 6) {
+    coldRolled.push({
+      dwg: parts[1] || '', type: parts[2] || '', section: parts[3] || '',
+      length: parseFloat(parts[4]) || 0, qty: parseFloat(parts[5]) || 0,
+      kgm: parseFloat(parts[6]) || 0,
+      confidence: parseInt(parts[7]) || 80,
+      flag: parts.slice(8).join(',').trim() || '', notes: ''
+    });
+  }
+}
+
+if (hotRolled.length === 0 && coldRolled.length === 0) {
+  return res.status(502).json({ error: 'No steel members found. Check the PDF contains a structural drawing with member sizes shown.' });
+}
+
+const seen = {};
+hotRolled.forEach(r => {
+  const key = `${r.section}|${r.length}|${r.qty}`;
+  if (seen[key]) {
+    r.flag = (r.flag ? r.flag + ' - ' : '') + 'POSSIBLE DUPLICATE of ' + seen[key];
+    r.confidence = Math.min(r.confidence, 60);
+  } else {
+    seen[key] = r.dwg || 'earlier row';
+  }
 });
+
+return res.status(200).json({ hotRolled, coldRolled });
