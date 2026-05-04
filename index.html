@@ -1719,6 +1719,56 @@ function handleFile(e){
   if(!f)return;
   processFile(f);
 }
+async function handleFiles(e){
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  if(files.length===1){processFile(files[0]);return;}
+  // Multiple files — process sequentially and merge
+  const pb=document.getElementById('progBox');
+  const rb=document.getElementById('resultBanner');
+  pb.style.display='block';
+  rb.className='result-banner';
+  document.getElementById('spinner').style.display='';
+  document.getElementById('progTitle').textContent='Processing '+files.length+' drawings...';
+  let allHR=[],allCR=[],errors=[];
+  for(let i=0;i<files.length;i++){
+    document.getElementById('progTitle').textContent='Drawing '+(i+1)+' of '+files.length+': '+files[i].name;
+    [1,2,3,4,5].forEach(n=>setStep(n,''));
+    try{
+      setStep(1,'active');
+      const b64=await toB64(files[i]);
+      if(!b64.startsWith('JVBERi'))throw new Error('Not a valid PDF');
+      setStep(1,'done');setStep(2,'active');
+      const scaleInfo=getScaleInfo();
+      const resp=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdfBase64:b64,scale:scaleInfo.scale,drawingType:scaleInfo.type,workType:scaleInfo.workType})});
+      setStep(2,'done');setStep(3,'active');
+      const rawText=await resp.text();
+      const data=JSON.parse(rawText);
+      if(!resp.ok||data.error)throw new Error(data.error||'Server error');
+      setStep(3,'done');setStep(4,'active');
+      allHR=[...allHR,...(data.hotRolled||[])];
+      allCR=[...allCR,...(data.coldRolled||[])];
+      setStep(4,'done');setStep(5,'done');
+    }catch(err){
+      errors.push(files[i].name+': '+err.message);
+    }
+  }
+  document.getElementById('spinner').style.display='none';
+  if(allHR.length===0&&allCR.length===0){
+    showErr('No steel found across '+files.length+' drawings.'+(errors.length?' Errors: '+errors.join(', '):''));
+    return;
+  }
+  window.showApprovalIfNeeded(allHR,allCR);
+  document.getElementById('progTitle').textContent='Complete ✓ — '+files.length+' drawings';
+  rb.className='result-banner success show';
+  document.getElementById('resultIcon').textContent='✅';
+  document.getElementById('resultText').innerHTML='<strong>Done!</strong> Found '+allHR.length+' hot rolled + '+allCR.length+' cold rolled members from '+files.length+' drawings.'+(errors.length?'<br><span style="color:var(--accent)">⚠ '+errors.join(', ')+'</span>':'');
+  setTimeout(()=>{if(allHR.length>0)switchTab('hot');else switchTab('cold');},1500);
+}
+  const f=e.target.files[0];
+  if(!f)return;
+  processFile(f);
+}
 function toB64(file){
   return new Promise((res,rej)=>{
     const r=new FileReader();
