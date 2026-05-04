@@ -887,7 +887,6 @@ const CR_PRICES = {"142Z13":[2.84,3.5,"142Z13","/metre"],"142Z14":[3.05,3.76,"14
 function normSection(s){
   return String(s||'').toUpperCase().replace(/[x\*]/g,'X').replace(/\s+/g,'').replace(/UB|UC|RHS|SHS|CHS|PFC|RSA|FLT|PLT/g,m=>m);
 }
-
 function lookupHR(section){
   if(!section)return null;
   const n=normSection(section);
@@ -899,7 +898,6 @@ function lookupHR(section){
   }
   return null;
 }
-
 function renderPrices(){
   let matched=0,unmatched=0,totalMat=0;
   const rows=[];
