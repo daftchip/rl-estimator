@@ -303,8 +303,8 @@ input[type=number]{text-align:right;}
     <div id="work-type-hint" style="background:rgba(240,165,0,0.08);border-left:3px solid var(--accent);padding:8px 12px;font-size:11px;color:var(--dim);border-radius:0 4px 4px 0;margin-bottom:10px;display:none">
       <strong style="color:var(--accent)">Alteration mode:</strong> AI will ignore existing steel and only extract members marked as NEW, ADDITIONAL or TO BE PROVIDED. Members marked EXISTING, EX. or TO REMAIN will be excluded.
     </div>
-    <div class="drop-zone" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
-  <input type="file" id="pdfInput" accept=".pdf,application/pdf" multiple onchange="handleFiles(event)" style="pointer-events:none;">
+    <div class="drop-zone" ondragover="event.preventDefault();this.style.borderColor='#fff';" ondragleave="this.style.borderColor='';" ondrop="this.style.borderColor='';handleDrop(event)">
+  <input type="file" id="pdfInput" accept=".pdf,application/pdf" multiple onchange="handleFiles(event)">
       <span style="font-size:44px;display:block;margin-bottom:10px">📐</span>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;color:var(--accent);margin-bottom:5px">TAP TO UPLOAD DRAWINGS</div>
 <div style="color:var(--dim);font-size:12px;line-height:1.6">Select one or more structural PDFs — AI extracts all members automatically</div>
