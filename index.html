@@ -1847,8 +1847,7 @@ window.showApprovalIfNeeded=function(hr,cr){
   if(hr&&hr.length>0){
     hotRows=hr.map(d=>{
       const r=mkH(d);
-      const p=lookupHR(r.section);
-      if(p){r.kgm=r.kgm||p[0];r.m2m=r.m2m||p[1];r.rate=p[2];}
+      if(typeof lookupHR==='function'){const p=lookupHR(r.section);if(p){r.kgm=r.kgm||p[0];r.m2m=r.m2m||p[1];r.rate=p[2];}}
       return r;
     });
     renderHot();
@@ -1856,8 +1855,7 @@ window.showApprovalIfNeeded=function(hr,cr){
   if(cr&&cr.length>0){
     coldRows=cr.map(d=>{
       const r=mkC(d);
-      const sec=(r.section||'').toUpperCase().replace(/\s/g,'');
-      if(CR_PRICES[sec]){r.kgm=r.kgm||CR_PRICES[sec][0];r.rate=CR_PRICES[sec][1];}
+      if(typeof CR_PRICES!=='undefined'){const sec=(r.section||'').toUpperCase().replace(/\s/g,'');if(CR_PRICES[sec]){r.kgm=r.kgm||CR_PRICES[sec][0];r.rate=CR_PRICES[sec][1];}}
       return r;
     });
     renderCold();
