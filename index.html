@@ -891,10 +891,18 @@ function lookupHR(section){
   if(!section)return null;
   const n=normSection(section);
   if(HR_PRICES[n])return HR_PRICES[n];
-  // Try fuzzy: strip suffix letters
   const keys=Object.keys(HR_PRICES);
   for(const k of keys){
     if(k.startsWith(n)||n.startsWith(k))return HR_PRICES[k];
+  }
+  const m=n.match(/^(\d+)X(\d+)/);
+  if(m){
+    const prefix=m[1]+'X'+m[2]+'X';
+    const matches=keys.filter(k=>k.startsWith(prefix));
+    if(matches.length>0){
+      matches.sort((a,b)=>parseFloat(a.split('X')[2]||0)-parseFloat(b.split('X')[2]||0));
+      return HR_PRICES[matches[0]];
+    }
   }
   return null;
 }
