@@ -796,7 +796,8 @@ function renderHot(){
   const kgEl=document.getElementById('tot-hr-kg');if(kgEl)kgEl.textContent=Math.round(sKg).toLocaleString();
   const tnsEl=document.getElementById('tot-hr-tns');if(tnsEl)tnsEl.textContent=(sKg/1000).toFixed(3)+' T';
   const saEl=document.getElementById('tot-hr-sa');if(saEl)saEl.textContent=sSA.toFixed(2);
- document.getElementById('tot-hr-total').textContent='£'+Math.round(sTot).toLocaleString();
+  const steelEl=document.getElementById('tot-hr-steel');if(steelEl)steelEl.textContent='£'+Math.round(hotRows.reduce((s,r)=>s+calcH(r).sp,0)).toLocaleString();
+  const grandEl=document.getElementById('tot-hr-grand');if(grandEl)grandEl.textContent='£'+Math.round(sTot).toLocaleString();
   const qtyEl=document.getElementById('tot-hr-qty');if(qtyEl)qtyEl.textContent=hotRows.reduce((s,r)=>s+(+r.qty||0),0);
   updateSummary();
 }
