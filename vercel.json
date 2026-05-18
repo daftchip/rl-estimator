@@ -12,7 +12,12 @@
   },
   "routes": [
     { "src": "/api/analyse", "dest": "/api/analyse.js" },
-{ "src": "/api/compare", "dest": "/api/compare.js" },
+    { "src": "/api/compare", "dest": "/api/compare.js" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  ],
+  "api": {
+    "bodyParser": {
+      "sizeLimit": "20mb"
+    }
+  }
 }
