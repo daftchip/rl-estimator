@@ -1,10 +1,70 @@
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '20mb',
+      sizeLimit: '50mb',
     },
   },
 };
+
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+async function analyseOnePage(pageBase64, prompt) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 8192,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pageBase64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  });
+
+  const respText = await response.text();
+  if (!response.ok) {
+    let errMsg = 'API error ' + response.status;
+    try { const e = JSON.parse(respText); errMsg = e.error?.message || errMsg; } catch(_) {}
+    throw new Error(errMsg);
+  }
+
+  const data = JSON.parse(respText);
+  if (data.type === 'error') throw new Error(data.error?.message || 'AI error');
+  return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+}
+
+function splitPdfPages(pdfBuffer) {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rl-pdf-'));
+  const inputPath = path.join(tmpDir, 'input.pdf');
+  fs.writeFileSync(inputPath, pdfBuffer);
+
+  // Use pdftk or qpdf if available, otherwise return the whole PDF as one page
+  try {
+    // Try qpdf first
+    execSync(`qpdf --split-pages ${inputPath} ${path.join(tmpDir, 'page-%d.pdf')} 2>/dev/null`);
+    const pages = fs.readdirSync(tmpDir)
+      .filter(f => f.startsWith('page-') && f.endsWith('.pdf'))
+      .sort()
+      .map(f => fs.readFileSync(path.join(tmpDir, f)).toString('base64'));
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    return pages;
+  } catch(e) {
+    // qpdf not available — return whole PDF as single item
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    return [pdfBuffer.toString('base64')];
+  }
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -66,119 +126,62 @@ DO NOT skip any floor level. DO NOT assume members on one floor are the same as 
 ═══════════════════════════════════════════════
 CRITICAL RULE 3 — RAFTERS AND BEAMS ARE DIFFERENT ROWS
 ═══════════════════════════════════════════════
-If rafters appear in BOTH plan and elevation, count from the PLAN (most accurate qty).
-But DO list them — do not omit them.
-Rafters at different spacings or lengths = separate rows.
+Count rafters from the PLAN view. List every group as a separate row.
+Rafters at different lengths = separate rows.
 
 ═══════════════════════════════════════════════
-CRITICAL RULE 4 — IDENTICAL LENGTHS ARE STILL SEPARATE ROWS
+CRITICAL RULE 4 — GROUP BY SECTION AND LENGTH
 ═══════════════════════════════════════════════
-If the same section appears at 10 different locations with the same length, list them as ONE row with qty=10.
-But if the same section appears at TWO DIFFERENT LENGTHS, that is TWO ROWS.
+Same section + same length = ONE row, qty = total count.
+Same section + different length = SEPARATE rows.
 
 ═══════════════════════════════════════════════
 SECTION SIZES — READ CAREFULLY
 ═══════════════════════════════════════════════
-- UB beams: e.g. 178x102x19UB, 254x146x31UB, 305x165x40UB, 406x140x46UB
-- UC columns: e.g. 152x152x23UC, 254x146x31UC, 203x203x46UC
+- UB beams: e.g. 178x102x19UB, 254x146x31UB, 305x165x40UB
+- UC columns: e.g. 152x152x23UC, 254x146x31UC
 - PFC channels: e.g. PFC200x75, PFC230x90
-- CHS: e.g. CHS76.1x3.2, CHS114.3x3.6, CHS139.7x4.0
-- RSA angles: e.g. RSA100x100x8, RSA75x75x6
-- Flat plate bracing: e.g. FLT10x100, 10x100 flat
-- Note: section labels on drawings often written as e.g. "178x102UB 19" or "178/102/19" — always output as 178x102x19UB
+- CHS: e.g. CHS76.1x3.2, CHS114.3x3.6
+- RSA angles: e.g. RSA100x100x8
+- Flat plate bracing: e.g. FLT10x100
+- Labels like "178x102UB 19" or "178/102/19" → output as 178x102x19UB
 
 ═══════════════════════════════════════════════
-DIMENSIONS
-═══════════════════════════════════════════════
-Priority order:
-1. Printed dimension text on drawing (most accurate)
-2. Member schedule or notes table on drawing
-3. Calculate: bay spacing x number of bays
-4. Scale from drawing (last resort — set confidence below 65)
-
-═══════════════════════════════════════════════
-BRACING
-═══════════════════════════════════════════════
-- List per elevation grid: e.g. "Elevation GL A", "Elevation GL 1"
-- CHS diagonal bracing: measure each diagonal length separately
-- Flat plate bracing: note size e.g. FLT10x100
-- Horizontal wind girder: separate row from vertical bracing
-
-═══════════════════════════════════════════════
-HAUNCHES
-═══════════════════════════════════════════════
-- List haunches as separate rows from rafters
-- Same section as rafter, shorter length (typically 1000-1500mm)
-- Qty = same as number of rafter ends at eaves
-
-═══════════════════════════════════════════════
-COLD ROLLED MEMBERS
-═══════════════════════════════════════════════
-- Purlins: section (e.g. 202Z18), spacing from drawing notes
-- Side rails: section (e.g. 202C15), levels from elevation
-- Eaves beams: e.g. 230E25, 1 per bay along each eave
-- Calculate: purlins per rafter = ROUNDUP(rafter_length / spacing) + 1
-
-═══════════════════════════════════════════════
-OUTPUT FORMAT — Return ONLY these CSV lines, nothing else
+OUTPUT FORMAT — CSV LINES ONLY, NO OTHER TEXT
 ═══════════════════════════════════════════════
 HOT,dwg_ref,member_type,section,length_mm,qty,kg_per_m,m2_per_m,confidence,flag
 COLD,dwg_ref,member_type,section,length_mm,qty,kg_per_m,confidence,flag
 
-confidence: 95+=clearly stated on drawing, 80-94=mostly clear, 65-79=some inference needed, below 65=scaled or guessed
-flag: brief reason if confidence below 80, or working shown for cold rolled calc, or GALVANISED if galvanised
+confidence: 95+=clearly stated, 80-94=mostly clear, 65-79=inferred, below 65=scaled/guessed
+flag: reason if below 80, GALVANISED if galvanised
 
 EXAMPLES:
-HOT,First Floor Plan,Column,254x146x31UB,5690,8,31.1,1.057,95,grid A-K cols
-HOT,First Floor Plan,Beam,178x102x19UB,4128,20,19,0.735,95,secondary beams
-HOT,Roof Plan,Rafter,178x102x19UB,3114,20,19,0.735,95,typical rafter bays
-HOT,Elevation GL A,Bracing,CHS76.1x3.2,5204,2,5.75,0.239,88,diagonal measured
-HOT,Elevation GL K,Flat Bracing,FLT10x100,4225,2,7.85,0.220,90,flat plate bracing
-COLD,Roof Plan,Purlin,202Z18,6000,90,4.88,85,rafter 12080/1800crs=7/side x2 x7 bays
-COLD,Elevation,Side Rail,202C15,6000,19,4.09,88,5 rail levels x 7 bays
+HOT,First Floor Plan,Column,254x146x31UB,5690,8,31.1,1.057,95,grid cols
+HOT,Roof Plan,Rafter,178x102x19UB,3114,20,19,0.735,95,typical bays
+HOT,Elevation GL A,Bracing,CHS76.1x3.2,5204,2,5.75,0.239,88,diagonal
+HOT,Elevation GL K,Flat Bracing,FLT10x100,4225,2,7.85,0.220,90,flat plate
+COLD,Roof Plan,Purlin,202Z18,6000,90,4.88,85,1800crs calc
+COLD,Elevation,Side Rail,202C15,6000,19,4.09,88,5 levels x 7 bays
 
-Use 0 for any unknown values. Include EVERY steel member. Do not add any text before or after the CSV lines.`;
+Use 0 for unknown values. Include EVERY steel member. No text outside CSV lines.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 8192,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
+    // Split PDF into pages and process each separately
+    const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+    const pages = splitPdfPages(pdfBuffer);
 
-    const respText = await response.text();
-    if (!response.ok) {
-      let errMsg = 'API error ' + response.status;
-      try { const e = JSON.parse(respText); errMsg = e.error?.message || errMsg; } catch(_) {}
-      return res.status(502).json({ error: errMsg });
+    // Process all pages in parallel (max 4 at a time)
+    const allLines = [];
+    const batchSize = 4;
+    for (let i = 0; i < pages.length; i += batchSize) {
+      const batch = pages.slice(i, i + batchSize);
+      const results = await Promise.all(batch.map(p => analyseOnePage(p, prompt).catch(e => '')));
+      results.forEach(r => allLines.push(...r.split('\n')));
     }
-
-    let data;
-    try { data = JSON.parse(respText); }
-    catch(e) { return res.status(502).json({ error: 'Invalid response from AI service' }); }
-
-    if (data.type === 'error') return res.status(502).json({ error: data.error?.message || 'AI error' });
-
-    const raw = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
-    if (!raw) return res.status(502).json({ error: 'No response from AI' });
 
     const hotRolled = [];
     const coldRolled = [];
-    const lines = raw.split('\n').map(l => l.trim()).filter(l => l.startsWith('HOT,') || l.startsWith('COLD,'));
+    const lines = allLines.map(l => l.trim()).filter(l => l.startsWith('HOT,') || l.startsWith('COLD,'));
 
     for (const line of lines) {
       const parts = line.split(',').map(p => p.trim());
