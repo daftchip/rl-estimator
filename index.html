@@ -1888,7 +1888,45 @@ function importCSV(){
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.csv';
+  input.style.display = 'none';
+  document.body.appendChild(input);
   input.onchange = function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      const lines = ev.target.result.split('\n');
+      const newHot = [];
+      let inHot = false;
+      for(const line of lines){
+        const p = line.split(',').map(x=>x.replace(/^"|"$/g,'').trim());
+        if(p[0]==='HOT ROLLED') { inHot=true; continue; }
+        if(p[0]==='COLD ROLLED') { inHot=false; continue; }
+        if(!inHot) continue;
+        if(p[0]==='Dwg' || !p[2]) continue;
+        const qty = parseFloat(p[4])||0;
+        if(qty===0) continue;
+        newHot.push(mkH({
+          dwg: p[0]||'', type: p[1]||'', section: p[2]||'',
+          length: parseFloat(p[3])||0, qty: qty,
+          kgm: parseFloat(p[5])||0, m2m: parseFloat(p[9])||0
+        }));
+      }
+      document.body.removeChild(input);
+      if(newHot.length===0){ alert('No rows found — check the CSV format'); return; }
+      if(hotRows.filter(r=>r.section).length>0){
+        if(!confirm('Replace current take-off with '+newHot.length+' imported rows?')) return;
+      }
+      hotRows = newHot;
+      renderHot();
+      switchTab('hot');
+      alert('Imported '+newHot.length+' members successfully');
+    };
+    reader.readAsText(file);
+  };
+  document.body.appendChild(input);
+  input.click();
+}
     const file = e.target.files[0];
     if(!file) return;
     const reader = new FileReader();
