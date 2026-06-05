@@ -484,7 +484,10 @@ input[type=number]{text-align:right;}
         </tfoot>
       </table>
     </div>
-    <button class="add-row-btn" onclick="addRow('hot')">+ Add Member</button>
+     <div style="display:flex;gap:8px;margin-top:6px;">
+      <button class="add-row-btn" onclick="addRow('hot')" style="flex:1">+ Add Member</button>
+      <button class="add-row-btn" onclick="importCSV()" style="flex:1;border-color:#1a5276;color:#5bc8f5;">⬆ Import CSV</button>
+    </div>
     <div class="content-pad"></div>
   </div>
   <div id="panel-cold" class="hidden">
