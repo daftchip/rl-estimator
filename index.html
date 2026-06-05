@@ -247,7 +247,9 @@ input[type=number]{text-align:right;}
     <button onclick="showJobs()" title="Load estimate" style="background:var(--bg2);color:var(--accent);border:1px solid var(--accent);border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;" id="jobs-btn">📂 Jobs</button>
      <button class="hdr-btn" onclick="exportCSV()" style="flex-shrink:0;padding:7px 14px;font-size:12px;">⬇ CSV</button>
           <button class="hdr-btn" onclick="importCSV()" style="flex-shrink:0;padding:7px 14px;font-size:12px;background:#1a5276;">⬆ Import</button>
-    <button onclick="generateQuote()" style="background:var(--crimson);color:#fff;border:none;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;">📄 Quote</button>
+    <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCSVImport(event)">
+<button onclick="document.getElementById('csvFileInput').click()" style="background:#1a5276;color:#fff;border:none;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;">⬆ Import</button>
+<button onclick="generateQuote()" style="background:var(--crimson);color:#fff;border:none;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:6px 10px;cursor:pointer;flex-shrink:0;">📄 Quote</button>
   </div>
 </header>
 <div class="summary">
