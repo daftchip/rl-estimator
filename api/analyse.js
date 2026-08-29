@@ -13,7 +13,7 @@ async function analyseOnePage(pageBase64, prompt) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 8192,
+      max_tokens: 24000,
       messages: [{
         role: 'user',
         content: [
