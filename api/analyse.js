@@ -133,6 +133,32 @@ Same section + same length = ONE row, qty = total count.
 Same section + different length = SEPARATE rows.
 
 ═══════════════════════════════════════════════
+CRITICAL RULE 5 — HOW TO DETERMINE LENGTH (in priority order)
+═══════════════════════════════════════════════
+1. BEST: An explicit dimension string, leader line or text label giving that member's exact length. Use this whenever it exists. → confidence 95+
+2. NEXT: Calculate from grid spacing — the distance between two labelled gridlines (e.g. GL A to GL B) the member spans. → confidence 80-94, note "grid calc GL X-Y" in flag
+3. LAST RESORT: Measure against the stated drawing scale using the page geometry. → confidence below 80, note "scaled off drawing" in flag
+Never invent a length. If truly unreadable, output length 0 with confidence below 50 and flag "length unreadable — needs site check or RFI".
+
+═══════════════════════════════════════════════
+CRITICAL RULE 6 — WORK THE GRID METHODICALLY
+═══════════════════════════════════════════════
+Structural drawings are set out on a numbered/lettered grid (e.g. 1,2,3... one way, A,B,C... the other). Use grid intersections to pin down each member's location — put this in dwg_ref (e.g. "GL A-B / 1-2"). Go bay by bay, grid-square by grid-square, in a fixed order (e.g. left-to-right, top-to-bottom) rather than scanning loosely — this is what prevents double-counting a member twice or missing one entirely, and is standard practice for a proper take-off.
+
+═══════════════════════════════════════════════
+CRITICAL RULE 7 — SCHEDULES ARE THE SOURCE OF TRUTH FOR SECTION SIZE
+═══════════════════════════════════════════════
+If any schedule or table on the sheet lists member sizes, treat it as definitive for the SECTION field. But still confirm each scheduled item actually appears on the drawing, and count its true quantity from the drawing/plan view — only take quantity directly from the schedule if the schedule explicitly states a quantity for that mark.
+
+═══════════════════════════════════════════════
+CRITICAL RULE 8 — SELF-CHECK BEFORE FINISHING
+═══════════════════════════════════════════════
+Before you output your final answer:
+1. Re-scan the whole drawing once more, bay by bay, specifically looking for anything easy to miss: eaves beams, gable posts, kickers, cranked columns, wind bracing, sag rods, mezzanine or plant-support steel, and members right at the edges/corners of the sheet.
+2. Sanity-check your total row count against the building's apparent size — a small single-bay unit is typically 15-40 hot rolled line items; a larger multi-bay building is often 60-150+. If your count seems low for what's shown, look again before answering.
+3. Do not stop early. Every steel member on the sheet must appear in your output, however small.
+
+═══════════════════════════════════════════════
 SECTION SIZES — READ CAREFULLY
 ═══════════════════════════════════════════════
 - UB beams: e.g. 178x102x19UB, 254x146x31UB, 305x165x40UB
@@ -149,8 +175,8 @@ OUTPUT FORMAT — CSV LINES ONLY, NO OTHER TEXT
 HOT,dwg_ref,member_type,section,length_mm,qty,kg_per_m,m2_per_m,confidence,flag
 COLD,dwg_ref,member_type,section,length_mm,qty,kg_per_m,confidence,flag
 
-confidence: 95+=clearly stated, 80-94=mostly clear, 65-79=inferred, below 65=scaled/guessed
-flag: reason if below 80, GALVANISED if galvanised
+confidence: 95+ = length AND section both explicitly labelled (drawing or schedule); 80-94 = section explicit, length from grid spacing; 65-79 = section or length partly inferred from notes or typical-bay assumptions; below 65 = scaled off the page with a ruler, or genuinely unclear and needs a human to check.
+flag: when confidence is below 80, always state HOW you arrived at the value (e.g. "grid calc GL 2-3", "scaled off drawing", "section illegible, taken from schedule"). Also flag GALVANISED where noted.
 
 EXAMPLES:
 HOT,First Floor Plan,Column,254x146x31UB,5690,8,31.1,1.057,95,grid cols

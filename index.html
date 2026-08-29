@@ -1529,8 +1529,11 @@ function applyPriceLookups(hr, cr){
     if(typeof lookupHR==='function'){
       const p=lookupHR(r.section);
       if(p){
-        if(!r.kgm||+r.kgm==0)r.kgm=p[0];
-        if(!r.m2m||+r.m2m==0)r.m2m=p[1];
+        // The price book holds exact, authoritative kg/m and m2/m for standard
+        // sections — always prefer it over anything the AI estimated, since
+        // these are known physical constants, not a judgement call.
+        r.kgm=p[0];
+        r.m2m=p[1];
         if(!r.rate||+r.rate==0)r.rate=p[2];
         r.galvRate=r.galvRate||0;
         r.paintRate=r.paintRate||0;
@@ -1541,7 +1544,7 @@ function applyPriceLookups(hr, cr){
     if(typeof CR_PRICES!=='undefined'){
       const sec=(r.section||'').toUpperCase().replace(/\s/g,'');
       if(CR_PRICES[sec]){
-        if(!r.kgm||+r.kgm==0)r.kgm=CR_PRICES[sec][0];
+        r.kgm=CR_PRICES[sec][0];
         if(!r.rate||+r.rate==0)r.rate=CR_PRICES[sec][1];
       }
     }
