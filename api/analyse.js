@@ -33,7 +33,12 @@ async function analyseOnePage(pageBase64, prompt) {
 
   const data = JSON.parse(respText);
   if (data.type === 'error') throw new Error(data.error?.message || 'AI error');
-  return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+  const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+  if (!text) {
+    const blockTypes = (data.content || []).map(c => c.type).join(',') || 'none';
+    throw new Error(`AI returned no text (stop_reason=${data.stop_reason || '?'}, content_blocks=[${blockTypes}])`);
+  }
+  return text;
 }
 
 function splitPdfPages(pdfBuffer) {
