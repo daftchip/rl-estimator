@@ -880,6 +880,18 @@ function resetRates(){document.querySelectorAll('.rate-inp').forEach(i=>i.value=
 function resetAll(){
   if(!confirm('Reset everything?\n\nThis will clear all members, rates and the project name.\n\nAre you sure?'))return;
   hotRows=[];coldRows=[];nid=1;
+for(let i=0;i<2;i++)hotRows.push(mkH());
+  coldRows.push(mkC());
+  document.getElementById('projName').value='';
+  document.getElementById('drawingScale').value='auto';
+  document.getElementById('drawingType').value='ga';
+  document.getElementById('progBox').style.display='none';
+  document.getElementById('resultBanner').className='result-banner';
+  resetRates();
+  renderHot();renderCold();renderPrices();
+  switchTab('pdf');
+}
+
   
 // ── R&L SECTION PRICE DATABASE ──
 // HR: {normKey: [weight, m2m, rate_per_tonne, display_section, category]}
@@ -1731,17 +1743,6 @@ function applyLabourToRates(){
   const orig = btn.textContent;
   btn.textContent = '✔ Copied to Rates!';
   setTimeout(()=>{ btn.textContent=orig; }, 2000);
-}
-for(let i=0;i<2;i++)hotRows.push(mkH());
-  coldRows.push(mkC());
-  document.getElementById('projName').value='';
-  document.getElementById('drawingScale').value='auto';
-  document.getElementById('drawingType').value='ga';
-  document.getElementById('progBox').style.display='none';
-  document.getElementById('resultBanner').className='result-banner';
-  resetRates();
-  renderHot();renderCold();renderPrices();
-  switchTab('pdf');
 }
 function calcQuickRate(){
   const supply=parseFloat(document.getElementById('q_supply').value)||0;
