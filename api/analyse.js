@@ -165,13 +165,14 @@ Use 0 for unknown values. Include EVERY steel member. No text outside CSV lines.
     // Process all pages in parallel (max 4 at a time)
     const allLines = [];
     const pageErrors = [];
+    const rawResponses = [];
     const batchSize = 4;
     for (let i = 0; i < pages.length; i += batchSize) {
       const batch = pages.slice(i, i + batchSize);
       const results = await Promise.all(batch.map(p =>
         analyseOnePage(p, prompt).catch(e => { pageErrors.push(e.message); return ''; })
       ));
-      results.forEach(r => allLines.push(...r.split('\n')));
+      results.forEach(r => { rawResponses.push(r); allLines.push(...r.split('\n')); });
     }
 
     const hotRolled = [];
@@ -204,7 +205,8 @@ Use 0 for unknown values. Include EVERY steel member. No text outside CSV lines.
       if (pageErrors.length > 0) {
         return res.status(502).json({ error: 'AI analysis failed: ' + pageErrors[0] });
       }
-      return res.status(502).json({ error: 'No steel members found. Check the PDF contains a structural drawing with member sizes shown.' });
+      const sample = rawResponses.filter(r => r).join(' | ').slice(0, 600);
+      return res.status(502).json({ error: 'No steel members found. AI said: ' + (sample || '(AI returned an empty response)') });
     }
 
     const seen = {};
