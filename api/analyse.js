@@ -1,11 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
-  },
-};
-
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');

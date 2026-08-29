@@ -728,8 +728,8 @@ input[type=number]{text-align:right;}
 </div>
 <script>
 let hotRows=[],coldRows=[],nid=1;
-function mkH(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.section||'',length:d.length||'',qty:d.qty||'',kgm:d.kgm||'',m2m:d.m2m||'',rate:'',galvRate:'',paintRate:'',notes:d.notes||'',confidence:d.confidence||100,flag:d.flag||''};}
-function mkC(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.section||'',length:d.length||'',qty:d.qty||'',kgm:d.kgm||'',rate:'',notes:d.notes||'',confidence:d.confidence||100,flag:d.flag||''};}
+function mkH(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.section||'',length:d.length||'',qty:d.qty||'',kgm:d.kgm||'',m2m:d.m2m||'',rate:d.rate||'',galvRate:d.galvRate||'',paintRate:d.paintRate||'',notes:d.notes||'',confidence:d.confidence||100,flag:d.flag||''};}
+function mkC(d={}){return{id:nid++,dwg:d.dwg||'',type:d.type||'',section:d.section||'',length:d.length||'',qty:d.qty||'',kgm:d.kgm||'',rate:d.rate||'',notes:d.notes||'',confidence:d.confidence||100,flag:d.flag||''};}
 function addRow(t){if(t==='hot'){hotRows.push(mkH());renderHot();}else{coldRows.push(mkC());renderCold();}}
 function delRow(t,id){if(t==='hot'){hotRows=hotRows.filter(r=>r.id!==id);renderHot();}else{coldRows=coldRows.filter(r=>r.id!==id);renderCold();}}
 function upd(t,id,f,v){const rows=t==='hot'?hotRows:coldRows;const r=rows.find(x=>x.id===id);if(r){r[f]=v;t==='hot'?renderHot():renderCold();markUnsaved();}}
@@ -893,29 +893,30 @@ function normSection(s){
   if(revMatch)n=revMatch[2]+revMatch[1];
   return n;
 }
+// The R&L price book keys UB/UC sections with bare dimensions (e.g. "203X203X46",
+// no "UC"/"UB" prefix) but keys PFC/RSA/etc. WITH their prefix (e.g. "PFC200X75").
+// Strip a leading letter-prefix so we can also try the bare form of any section.
+function bareNumeric(n){
+  const m=n.match(/^[A-Z]+([\d.]+X[\d.]+X[\d.]+)$/)||n.match(/^[A-Z]+([\d.]+X[\d.]+)$/);
+  return m?m[1]:n;
+}
 function lookupHR(section){
   if(!section)return null;
-  let n=normSection(section);
+  const n=normSection(section);
+  const bare=bareNumeric(n);
   if(HR_PRICES[n])return HR_PRICES[n];
+  if(HR_PRICES[bare])return HR_PRICES[bare];
   const keys=Object.keys(HR_PRICES);
   for(const k of keys){
-    if(k===n||k.startsWith(n)||n.startsWith(k))return HR_PRICES[k];
+    if(k===n||k===bare||k.startsWith(n)||n.startsWith(k)||k.startsWith(bare)||bare.startsWith(k))return HR_PRICES[k];
   }
-  const m=n.match(/^([A-Z]*)([\d.]+)X([\d.]+)/);
+  const m=bare.match(/^([\d.]+)X([\d.]+)/);
   if(m){
-    const prefix=m[1]+m[2]+'X'+m[3]+'X';
-    const matches=keys.filter(k=>k.startsWith(prefix));
+    const prefix=m[1]+'X'+m[2]+'X';
+    const matches=keys.filter(k=>k.startsWith(prefix)||k.includes(prefix));
     if(matches.length>0){
       matches.sort((a,b)=>parseFloat(a.split('X')[2]||0)-parseFloat(b.split('X')[2]||0));
       return HR_PRICES[matches[0]];
-    }
-    if(!m[1]){
-      const bare=m[2]+'X'+m[3]+'X';
-      const bareMatches=keys.filter(k=>k.includes(bare));
-      if(bareMatches.length>0){
-        bareMatches.sort((a,b)=>parseFloat(a.split('X')[2]||0)-parseFloat(b.split('X')[2]||0));
-        return HR_PRICES[bareMatches[0]];
-      }
     }
   }
   return null;
@@ -1509,6 +1510,32 @@ let _pendingHR = [], _pendingCR = [];
 function confClass(c){ return c>=80?'high':c>=60?'med':'low'; }
 function confLabel(c){ return c>=80?'✓ '+c+'%':c>=60?'⚠ '+c+'%':'⚠ '+c+'% — CHECK'; }
 
+// Applies R&L section-price-book lookups to freshly-extracted rows before they
+// hit hotRows/coldRows, so Steel £ / Total £ populate immediately on import.
+function applyPriceLookups(hr, cr){
+  hr.forEach(r=>{
+    if(typeof lookupHR==='function'){
+      const p=lookupHR(r.section);
+      if(p){
+        if(!r.kgm||+r.kgm==0)r.kgm=p[0];
+        if(!r.m2m||+r.m2m==0)r.m2m=p[1];
+        if(!r.rate||+r.rate==0)r.rate=p[2];
+        r.galvRate=r.galvRate||0;
+        r.paintRate=r.paintRate||0;
+      }
+    }
+  });
+  cr.forEach(r=>{
+    if(typeof CR_PRICES!=='undefined'){
+      const sec=(r.section||'').toUpperCase().replace(/\s/g,'');
+      if(CR_PRICES[sec]){
+        if(!r.kgm||+r.kgm==0)r.kgm=CR_PRICES[sec][0];
+        if(!r.rate||+r.rate==0)r.rate=CR_PRICES[sec][1];
+      }
+    }
+  });
+}
+
 function showApprovalIfNeeded(hr, cr){
   // Check if any items need review (confidence < 70)
   const flaggedHR = hr.filter(r=>(r.confidence||80) < 70);
@@ -1517,6 +1544,7 @@ function showApprovalIfNeeded(hr, cr){
 
   if(totalFlagged === 0){
     // All high confidence — import directly
+    applyPriceLookups(hr, cr);
     if(hr.length>0){hotRows=hr.map(d=>mkH(d));renderHot();}
     if(cr.length>0){coldRows=cr.map(d=>mkC(d));renderCold();}
     return false;
@@ -1598,6 +1626,7 @@ function approveAll(){
   });
 
   // Import all
+  applyPriceLookups(_pendingHR, _pendingCR);
   if(_pendingHR.length>0){hotRows=_pendingHR.map(d=>mkH(d));renderHot();}
   if(_pendingCR.length>0){coldRows=_pendingCR.map(d=>mkC(d));renderCold();}
 
@@ -1919,40 +1948,7 @@ function importCSV(){
   document.body.appendChild(input);
   input.click();
 }
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev){
-      const lines = ev.target.result.split('\n');
-      const newHot = [];
-      let inHot = false;
-      for(const line of lines){
-        const p = line.split(',').map(x=>x.replace(/^"|"$/g,'').trim());
-        if(p[0]==='HOT ROLLED') { inHot=true; continue; }
-        if(p[0]==='COLD ROLLED') { inHot=false; continue; }
-        if(!inHot) continue;
-        if(p[0]==='Dwg' || !p[2]) continue;
-        const qty = parseFloat(p[4])||0;
-        if(qty===0) continue;
-        newHot.push(mkH({
-          dwg: p[0]||'', type: p[1]||'', section: p[2]||'',
-          length: parseFloat(p[3])||0, qty: qty,
-          kgm: parseFloat(p[5])||0, m2m: parseFloat(p[9])||0
-        }));
-      }
-      if(newHot.length===0){ alert('No rows found — check the CSV format'); return; }
-      if(hotRows.filter(r=>r.section).length>0){
-        if(!confirm('Replace current take-off with '+newHot.length+' imported rows?')) return;
-      }
-      hotRows = newHot;
-      renderHot();
-      switchTab('hot');
-      alert('Imported '+newHot.length+' members successfully');
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
+function exportCSV(){
   const proj=document.getElementById('projName').value||'Estimate';
   let csv='R&L ESTIMATOR,'+proj+'\n\nHOT ROLLED\nDwg,Type,Section,Length mm,Qty,Total m,Kg/m,Total Kg,M2/m,Surface m2,Rate,Steel £,Galv,Galv £,Paint,Paint £,Total £,Notes\n';
   hotRows.forEach(r=>{const c=calcH(r);csv+='"'+r.dwg+'","'+r.type+'","'+r.section+'",'+r.length+','+r.qty+','+c.totalM.toFixed(2)+','+r.kgm+','+c.kg.toFixed(1)+','+r.m2m+','+c.sa.toFixed(2)+','+r.rate+','+c.sp.toFixed(2)+','+r.galvRate+','+c.gp.toFixed(2)+','+r.paintRate+','+c.pp.toFixed(2)+','+c.total.toFixed(2)+',"'+r.notes+'"\n';});
@@ -1996,42 +1992,6 @@ function updateWorkTypeHint(){
 for(let i=0;i<2;i++)hotRows.push(mkH());
 coldRows.push(mkC());
 renderHot();renderCold();
-</script>
-<script>
-window.showApprovalIfNeeded=function(hr,cr){
-  if(hr&&hr.length>0){
-    hotRows=hr.map(d=>{
-      const r=mkH(d);
-      if(typeof lookupHR==='function'){
-        const p=lookupHR(r.section);
-        if(p){
-          if(!r.kgm||+r.kgm==0)r.kgm=p[0];
-          if(!r.m2m||+r.m2m==0)r.m2m=p[1];
-          r.rate=p[2];          // number from HR_PRICES — calcH uses +r.rate so this is fine
-          r.galvRate=r.galvRate||0;
-          r.paintRate=r.paintRate||0;
-        }
-      }
-      return r;
-    });
-    renderHot();
-  }
-  if(cr&&cr.length>0){
-    coldRows=cr.map(d=>{
-      const r=mkC(d);
-      if(typeof CR_PRICES!=='undefined'){
-        const sec=(r.section||'').toUpperCase().replace(/\s/g,'');
-        if(CR_PRICES[sec]){
-          if(!r.kgm||r.kgm==0)r.kgm=CR_PRICES[sec][0];
-          r.rate=CR_PRICES[sec][1];
-        }
-      }
-      return r;
-    });
-    renderCold();
-  }
-  return false;
-};
 </script>
 </body>
 </html>
