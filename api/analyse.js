@@ -109,6 +109,18 @@ ONLY extract structural STEEL members:
 If you see "Pad Base", "RC slab", "Mass Concrete", "Foundation" — IGNORE IT COMPLETELY.
 
 ═══════════════════════════════════════════════
+CRITICAL RULE 1B — BASE PLATES, HAUNCHES, POSTS, AND BUILT-UP MEMBERS
+═══════════════════════════════════════════════
+A proper take-off includes these as their OWN line items, in addition to the main members:
+
+- BASE PLATES: every column foot typically has a welded base plate (a flat plate, e.g. PLT20x500). Output member_type "welded", section as the plate size (e.g. PLT20x500), length = the plate's longer dimension in mm, qty = matches the number of columns it serves. Look for base plate details/schedules, or a callout near the column base.
+- HAUNCHES: portal frame rafter/column haunches (the deepened triangular/tapered section at the eaves or apex knee joint) are their own line item, separate from the straight rafter or column they reinforce. Give them their own mark/reference if labelled (e.g. a haunch mark number), member_type "haunch", and the section of the plate/cutting used to form them if stated.
+- POSTS: a vertical member that is not a primary frame column (e.g. parapet post, corner post, gable post, infill post) should use member_type "post", not "column" or "beam".
+- BUILT-UP / COMPOSITE MEMBERS: when a hollow section or beam is shown welded together with a flat plate to form one built-up member (e.g. an RHS with a welded flange plate), output them as TWO separate rows — one for the main section (member_type "beam" or similar) and one for the plate (member_type "welded") — both sharing the same length and quantity, exactly as a fabricator would price them separately.
+
+Do not skip these just because they are smaller or less prominent than the main frame members — on a real take-off they are counted every time.
+
+═══════════════════════════════════════════════
 CRITICAL RULE 2 — COUNT EVERY MEMBER ON EVERY LEVEL
 ═══════════════════════════════════════════════
 Multi-storey buildings have steel on EACH floor — count them ALL separately:
@@ -183,6 +195,9 @@ HOT,First Floor Plan,Column,254x146x31UB,5690,8,31.1,1.057,95,grid cols
 HOT,Roof Plan,Rafter,178x102x19UB,3114,20,19,0.735,95,typical bays
 HOT,Elevation GL A,Bracing,CHS76.1x3.2,5204,2,5.75,0.239,88,diagonal
 HOT,Elevation GL K,Flat Bracing,FLT10x100,4225,2,7.85,0.220,90,flat plate
+HOT,BP1,Welded,PLT20x500,1040,14,78.5,1.080,90,base plate to column
+HOT,194.18,Haunch,610x305x179,4800,7,179,2.417,85,eaves haunch rafter/column
+HOT,Parapet,Post,152x152x37,2440,7,37,0.914,92,parapet post
 COLD,Roof Plan,Purlin,202Z18,6000,90,4.88,85,1800crs calc
 COLD,Elevation,Side Rail,202C15,6000,19,4.09,88,5 levels x 7 bays
 
