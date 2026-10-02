@@ -922,6 +922,23 @@ function lookupHR(section){
   for(const k of keys){
     if(k===n||k===bare||k.startsWith(n)||n.startsWith(k)||k.startsWith(bare)||bare.startsWith(k))return HR_PRICES[k];
   }
+  // Flats/plates (PLT, FLT) are keyed as PREFIX+thickness+X+width (2 numbers,
+  // e.g. "PLT20X500"). If the exact width isn't in the book, fall back to the
+  // same thickness and the nearest known width — better than no price at all
+  // for an oversized plate the book doesn't explicitly list.
+  const plateMatch=n.match(/^(PLT|FLT)([\d.]+)X([\d.]+)$/);
+  if(plateMatch){
+    const [,prefix,thickness,width]=plateMatch;
+    const sameThickness=keys.filter(k=>k.startsWith(prefix+thickness+'X'));
+    if(sameThickness.length>0){
+      const w=parseFloat(width);
+      sameThickness.sort((a,b)=>{
+        const wa=parseFloat(a.split('X')[1]||0), wb=parseFloat(b.split('X')[1]||0);
+        return Math.abs(wa-w)-Math.abs(wb-w);
+      });
+      return HR_PRICES[sameThickness[0]];
+    }
+  }
   const m=bare.match(/^([\d.]+)X([\d.]+)/);
   if(m){
     const prefix=m[1]+'X'+m[2]+'X';
@@ -1524,6 +1541,14 @@ function confLabel(c){ return c>=80?'✓ '+c+'%':c>=60?'⚠ '+c+'%':'⚠ '+c+'% 
 
 // Applies R&L section-price-book lookups to freshly-extracted rows before they
 // hit hotRows/coldRows, so Steel £ / Total £ populate immediately on import.
+// R&L price the box/circular hollow sections (RHS, SHS, CHS) at a single flat
+// rate per kg rather than a size-by-size book entry. Weight still comes from
+// the AI's own reading of the section (or the person's manual entry) since
+// that genuinely varies by exact dimensions.
+const HOLLOW_SECTION_RATE = 1630; // £/tonne, i.e. £1.630/kg
+function isHollowSection(section){
+  return /^(RHS|SHS|CHS)\b|^(RHS|SHS|CHS)[\d.]/i.test(normSection(section));
+}
 function applyPriceLookups(hr, cr){
   hr.forEach(r=>{
     if(typeof lookupHR==='function'){
@@ -1535,6 +1560,13 @@ function applyPriceLookups(hr, cr){
         r.kgm=p[0];
         r.m2m=p[1];
         if(!r.rate||+r.rate==0)r.rate=p[2];
+        r.galvRate=r.galvRate||0;
+        r.paintRate=r.paintRate||0;
+      } else if(isHollowSection(r.section)){
+        // No exact size match in the book — apply R&L's flat hollow-section
+        // rate, but keep the AI's own kg/m estimate since weight genuinely
+        // varies by wall thickness/size and isn't in the book yet.
+        if(!r.rate||+r.rate==0)r.rate=HOLLOW_SECTION_RATE;
         r.galvRate=r.galvRate||0;
         r.paintRate=r.paintRate||0;
       }
