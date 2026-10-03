@@ -2,6 +2,17 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { Agent } = require('undici');
+
+// Node's native fetch() (built on undici) defaults headersTimeout/bodyTimeout
+// to 300s each, which cuts off long-running Anthropic calls well before our
+// Vercel maxDuration (800s) is reached. Use a dedicated dispatcher with much
+// longer timeouts for this specific call.
+const longTimeoutDispatcher = new Agent({
+  headersTimeout: 780000, // 780s, just under our 800s maxDuration
+  bodyTimeout: 780000,
+  keepAliveTimeout: 780000
+});
 
 async function analyseOnePage(pageBase64, prompt) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -21,7 +32,8 @@ async function analyseOnePage(pageBase64, prompt) {
           { type: 'text', text: prompt }
         ]
       }]
-    })
+    }),
+    dispatcher: longTimeoutDispatcher
   });
 
   const respText = await response.text();
