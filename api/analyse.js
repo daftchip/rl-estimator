@@ -13,7 +13,7 @@ async function analyseOnePage(pageBase64, prompt) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 24000,
+      max_tokens: 48000,
       messages: [{
         role: 'user',
         content: [
@@ -188,8 +188,25 @@ SECTION SIZES — READ CAREFULLY
 - Labels like "178x102UB 19" or "178/102/19" → output as 178x102x19UB
 
 ═══════════════════════════════════════════════
-OUTPUT FORMAT — CSV LINES ONLY, NO OTHER TEXT
+STEP 1 — WORKING NOTES (REQUIRED, BEFORE YOU WRITE ANY CSV)
 ═══════════════════════════════════════════════
+A drawing with multiple elevations/sections is too easy to lose track of if you go straight to the final answer. Before writing a single CSV line, write out your working notes in plain text, structured like this:
+
+AREAS FOUND: <list the name of every single named elevation/section/plan view on the sheet, e.g. Elevation 1-A, Elevation 1-C, Elevation 1-D, Elevation 2-A, Elevation 2-B, Elevation 2-D, Elevation 3-C, Section 6, Section 7, Section 14, Roof Plan, Column Layout GL Grid, etc.>
+
+Then, for EACH area listed above, in turn, write a short checklist line per member you can see in that area, e.g.:
+Elevation 1-A: Parapet Post 152x152x37 x7, Bracing CHS114.3x6.3 x4, FLT10x100 bracing x2
+Elevation 1-C: Parapet Post 152x152x37 x7, ...
+Section 6: UC203x203x46 beam x2 (NOTE: this is a BEAM here, separate from the UC203x203x46 COLUMNS already logged in Column Layout GL Grid — do not merge them)
+...and so on for every area.
+
+This working-notes section is your scratch pad — write it in plain text, not CSV. It is what stops you silently losing a repeated callout or merging a beam into a column of the same size. Do not skip it or shortcut it.
+
+═══════════════════════════════════════════════
+STEP 2 — FINAL CSV OUTPUT
+═══════════════════════════════════════════════
+After your working notes, output the final take-off as CSV lines. Every single member you listed in your working notes above MUST appear as a CSV row here — the working notes and the CSV must match up one-for-one. Any text that is not a working-notes line or a CSV line (headings, commentary) is fine to include but will be ignored by the parser — only lines starting exactly with "HOT," or "COLD," are read as data.
+
 HOT,dwg_ref,member_type,section,length_mm,qty,kg_per_m,m2_per_m,confidence,flag
 COLD,dwg_ref,member_type,section,length_mm,qty,kg_per_m,confidence,flag
 
@@ -207,7 +224,7 @@ HOT,Parapet,Post,152x152x37,2440,7,37,0.914,92,parapet post
 COLD,Roof Plan,Purlin,202Z18,6000,90,4.88,85,1800crs calc
 COLD,Elevation,Side Rail,202C15,6000,19,4.09,88,5 levels x 7 bays
 
-Use 0 for unknown values. Include EVERY steel member. No text outside CSV lines.`;
+Use 0 for unknown values. Include EVERY steel member from your working notes as a CSV row.`;
 
   try {
     // Split PDF into pages and process each separately
