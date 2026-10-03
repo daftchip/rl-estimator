@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/analyse.js": {
-      "maxDuration": 300,
+      "maxDuration": 800,
       "memory": 1024
     },
     "api/compare.js": {
