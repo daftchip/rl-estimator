@@ -8,11 +8,16 @@
     "api/compare.js": {
       "maxDuration": 300,
       "memory": 1024
+    },
+    "api/upload.js": {
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
   "routes": [
     { "src": "/api/analyse", "dest": "/api/analyse.js" },
     { "src": "/api/compare", "dest": "/api/compare.js" },
+    { "src": "/api/upload", "dest": "/api/upload.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
