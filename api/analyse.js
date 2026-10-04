@@ -214,6 +214,12 @@ Section 6: UC203x203x46 beam x2 (NOTE: this is a BEAM here, separate from the UC
 
 This working-notes section is your scratch pad — write it in plain text, not CSV. It is what stops you silently losing a repeated callout or merging a beam into a column of the same size. Do not skip it or shortcut it.
 
+After you have listed every area, add two MANDATORY final checks to your working notes before moving to the CSV, written out explicitly, not skipped:
+
+HAUNCH CHECK: <go back through every rafter/portal-frame beam row you just listed above. For each one, write one line: "<section> rafter x<N> at <area> → haunch: YES, x<N> at <length>mm" if you can find a matching haunch, or "<section> rafter x<N> at <area> → haunch: NONE VISIBLE, checked eaves/apex/haunch schedule" if you genuinely cannot find one after specifically looking. You must write one of these two lines for every rafter/portal-beam row — do not leave this check out, and do not mark "NONE VISIBLE" without having actually looked at the eaves and apex of that frame and any haunch detail/schedule on the sheet.>
+
+RSA/ANGLE CHECK: <separately from the main scan, look specifically for any RSA angle sections (diagonal or vertical thin angle bracing, often drawn as a single bold line with a small "RSA" callout, used for wind bracing, eaves/verge trim, kickers, or lateral restraint — easy to mistake for a dimension line or grid line). Write "RSA found: <section> x<qty> at <area>" for each one, or "RSA check: none found on this sheet" if truly none exist. Do not skip this check even if you don't expect to find any.>
+
 ═══════════════════════════════════════════════
 STEP 2 — FINAL CSV OUTPUT
 ═══════════════════════════════════════════════
