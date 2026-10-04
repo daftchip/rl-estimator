@@ -82,8 +82,28 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { pdfBase64, scale, drawingType, workType } = req.body || {};
-  if (!pdfBase64) return res.status(400).json({ error: 'No PDF data provided' });
+  let { pdfBase64, blobUrl, scale, drawingType, workType } = req.body || {};
+  if (!pdfBase64 && !blobUrl) return res.status(400).json({ error: 'No PDF data provided' });
+
+  // Large files are uploaded client-side straight to Vercel Blob storage
+  // (bypassing the 4.5MB request body limit). When a blobUrl is given
+  // instead of inline base64, fetch the PDF server-side and convert it.
+  if (!pdfBase64 && blobUrl) {
+    try {
+      // Our Blob store is Private, so reads need the read-write token too.
+      const blobResp = await fetch(blobUrl, {
+        headers: process.env.BLOB_READ_WRITE_TOKEN
+          ? { Authorization: 'Bearer ' + process.env.BLOB_READ_WRITE_TOKEN }
+          : {}
+      });
+      if (!blobResp.ok) throw new Error('HTTP ' + blobResp.status);
+      const arrBuf = await blobResp.arrayBuffer();
+      pdfBase64 = Buffer.from(arrBuf).toString('base64');
+    } catch (e) {
+      return res.status(400).json({ error: 'Could not retrieve uploaded PDF from storage: ' + e.message });
+    }
+  }
+
   if (!pdfBase64.startsWith('JVBERi'))
     return res.status(400).json({ error: 'Invalid file - please upload a PDF drawing' });
 
@@ -112,17 +132,17 @@ DRAWING TYPE: ${typeDesc}
 DRAWING SCALE: ${scaleStr}
 WORK TYPE: ${workInstr}
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 1 — STEEL ONLY, NO CONCRETE
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 ONLY extract structural STEEL members:
 ✓ UB beams, UC columns, RHS, CHS, SHS, PFC channels, RSA angles, flat plates, hollow sections
 ✗ DO NOT extract: pad bases, pile caps, ground beams, RC slabs, concrete foundations, mass concrete, reinforcement bars, mesh, holding down bolts, anchor bolts
 If you see "Pad Base", "RC slab", "Mass Concrete", "Foundation" — IGNORE IT COMPLETELY.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 1B — BASE PLATES, HAUNCHES, POSTS, AND BUILT-UP MEMBERS
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 A proper take-off includes these as their OWN line items, in addition to the main members:
 
 - BASE PLATES: every column foot typically has a welded base plate (a flat plate, e.g. PLT20x500). A base plate detail normally gives you THREE separate numbers — thickness, width, and length — do not confuse them. Output member_type "welded", section as PLT{thickness}x{WIDTH} using the plate's WIDTH (the shorter in-plan dimension, e.g. PLT20x500), and length_mm as the plate's LENGTH (the other in-plan dimension, e.g. 1040 — this is very often a different, larger number than the width). NEVER copy the length value into the section field, and never put the same number in both the section and length_mm fields unless the plate really is square. qty = matches the number of columns it serves. Look for base plate details/schedules, or a callout near the column base.
@@ -132,9 +152,9 @@ A proper take-off includes these as their OWN line items, in addition to the mai
 
 Do not skip these just because they are smaller or less prominent than the main frame members — on a real take-off they are counted every time.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 2 — COUNT EVERY MEMBER ON EVERY LEVEL
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 Multi-storey buildings have steel on EACH floor — count them ALL separately:
 - Ground floor beams → separate rows
 - First floor beams → separate rows
@@ -144,43 +164,43 @@ Multi-storey buildings have steel on EACH floor — count them ALL separately:
 
 DO NOT skip any floor level. DO NOT assume members on one floor are the same as another.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 3 — RAFTERS AND BEAMS ARE DIFFERENT ROWS
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 Count rafters from the PLAN view. List every group as a separate row.
 Rafters at different lengths = separate rows.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 4 — GROUP BY SECTION AND LENGTH, BUT NEVER UNDER-COUNT A REPEATED CALLOUT
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 Same section + same length, within ONE single location/area = ONE row, qty = total count for that area.
 Same section + different length = SEPARATE rows.
 
 A drawing set very often repeats the SAME note in several different places — e.g. "Parapet Post 152x152x37 x7" labelled separately on Elevation 1-A, Elevation 1-C, Elevation 1-D, Section 6, Section 7 and Section 14, or a bracing flat labelled on every elevation. These are NOT the same steel counted twice — each labelled occurrence is a DIFFERENT physical location on the building and its quantity must be ADDED to the running total, not treated as a duplicate of a note you already logged elsewhere. If you see what looks like an identical section+length+qty combination appearing on a different drawing/elevation/section view, or against a different grid reference/dwg_ref, SUM it in — only collapse to one row when it is genuinely the same single callout on the same area read twice. When in doubt, keep them as separate rows (one per area) with the matching dwg_ref/area noted — it is far better to slightly over-list than to silently drop a real repeated member.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 5 — HOW TO DETERMINE LENGTH (in priority order)
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 1. BEST: An explicit dimension string, leader line or text label giving that member's exact length. Use this whenever it exists. → confidence 95+
 2. NEXT: Calculate from grid spacing — the distance between two labelled gridlines (e.g. GL A to GL B) the member spans. → confidence 80-94, note "grid calc GL X-Y" in flag
 3. LAST RESORT: Measure against the stated drawing scale using the page geometry. → confidence below 80, note "scaled off drawing" in flag
 Never invent a length. If truly unreadable, output length 0 with confidence below 50 and flag "length unreadable — needs site check or RFI".
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 6 — WORK THE GRID METHODICALLY, AREA BY AREA
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 Structural drawings are set out on a numbered/lettered grid (e.g. 1,2,3... one way, A,B,C... the other). Use grid intersections to pin down each member's location — put this in dwg_ref (e.g. "GL A-B / 1-2"). Go bay by bay, grid-square by grid-square, in a fixed order (e.g. left-to-right, top-to-bottom) rather than scanning loosely — this is what prevents double-counting a member twice or missing one entirely, and is standard practice for a proper take-off.
 
 If the sheet (or set of sheets) shows MULTIPLE separate elevations or sections — e.g. "Elevation 1-A", "Elevation 1-C", "Elevation 1-D", "Elevation 2-A", "Elevation 2-B", "Elevation 2-D", "Elevation 3-C", "Section 6", "Section 7", "Section 14" — treat EACH one as its own complete area to take off in full, in turn. Do not assume that because you've already logged a member type on one elevation, the same member type on a different elevation is already accounted for — even visually similar elevations usually have genuinely separate steel (different bracing runs, different posts, different beam lengths) that must each be read and counted on their own merits. Keep a running mental list of which named areas/elevations/sections you have fully worked through, and do not finish until every one of them has been covered.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 7 — SCHEDULES ARE THE SOURCE OF TRUTH FOR SECTION SIZE
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 If any schedule or table on the sheet lists member sizes, treat it as definitive for the SECTION field. But still confirm each scheduled item actually appears on the drawing, and count its true quantity from the drawing/plan view — only take quantity directly from the schedule if the schedule explicitly states a quantity for that mark.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 CRITICAL RULE 8 — SELF-CHECK BEFORE FINISHING
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 Before you output your final answer:
 1. Re-scan the whole drawing once more, bay by bay, specifically looking for anything easy to miss: eaves beams, gable posts, kickers, cranked columns, wind bracing, sag rods, mezzanine or plant-support steel, flat plate (FLT) diagonal bracing, small RSA angle bracing or cleats, small plates/gussets at connections (e.g. a thin PLT6 or similar light gauge plate used as a stiffener or cleat, easy to miss next to the larger base plates), and members right at the edges/corners of the sheet.
 2. Specifically re-check every named elevation/section view (see RULE 6) one more time for: (a) flat bracing plates (FLT...) — these are thin and easy to skim past, and (b) any post, bracing or beam callout that also appears on another elevation — confirm you have summed ALL of its occurrences, not just the first one you found.
@@ -188,9 +208,9 @@ Before you output your final answer:
 4. Sanity-check your total row count against the building's apparent size — a small single-bay unit is typically 15-40 hot rolled line items; a larger multi-bay building is often 60-150+, and a building with several named elevations/sections (see RULE 6) is usually at the higher end of that range or beyond. If your count seems low for what's shown, look again before answering.
 5. Do not stop early. Every steel member on the sheet must appear in your output, however small, however many times its callout is repeated across different areas.
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 SECTION SIZES — READ CAREFULLY
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 - UB beams: e.g. 178x102x19UB, 254x146x31UB, 305x165x40UB
 - UC columns: e.g. 152x152x23UC, 254x146x31UC
 - PFC channels: e.g. PFC200x75, PFC230x90
@@ -199,9 +219,9 @@ SECTION SIZES — READ CAREFULLY
 - Flat plate bracing: e.g. FLT10x100
 - Labels like "178x102UB 19" or "178/102/19" → output as 178x102x19UB
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 STEP 1 — WORKING NOTES (REQUIRED, BEFORE YOU WRITE ANY CSV)
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 A drawing with multiple elevations/sections is too easy to lose track of if you go straight to the final answer. Before writing a single CSV line, write out your working notes in plain text, structured like this:
 
 AREAS FOUND: <list the name of every single named elevation/section/plan view on the sheet, e.g. Elevation 1-A, Elevation 1-C, Elevation 1-D, Elevation 2-A, Elevation 2-B, Elevation 2-D, Elevation 3-C, Section 6, Section 7, Section 14, Roof Plan, Column Layout GL Grid, etc.>
@@ -220,9 +240,9 @@ HAUNCH CHECK: <go back through every rafter/portal-frame beam row you just liste
 
 RSA/ANGLE CHECK: <separately from the main scan, look specifically for any RSA angle sections (diagonal or vertical thin angle bracing, often drawn as a single bold line with a small "RSA" callout, used for wind bracing, eaves/verge trim, kickers, or lateral restraint — easy to mistake for a dimension line or grid line). Write "RSA found: <section> x<qty> at <area>" for each one, or "RSA check: none found on this sheet" if truly none exist. Do not skip this check even if you don't expect to find any.>
 
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 STEP 2 — FINAL CSV OUTPUT
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════
 After your working notes, output the final take-off as CSV lines. Every single member you listed in your working notes above MUST appear as a CSV row here — the working notes and the CSV must match up one-for-one. Any text that is not a working-notes line or a CSV line (headings, commentary) is fine to include but will be ignored by the parser — only lines starting exactly with "HOT," or "COLD," are read as data.
 
 HOT,dwg_ref,member_type,section,length_mm,qty,kg_per_m,m2_per_m,confidence,flag
