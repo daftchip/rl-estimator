@@ -1833,11 +1833,12 @@ async function handleFiles(e){
     [1,2,3,4,5].forEach(n=>setStep(n,''));
     try{
       setStep(1,'active');
-      const b64=await toB64(files[i]);
-      if(!b64.startsWith('JVBERi'))throw new Error('Not a valid PDF');
+      const head=await files[i].slice(0,5).text();
+      if(head!=='%PDF-')throw new Error('Not a valid PDF');
       setStep(1,'done');setStep(2,'active');
       const scaleInfo=getScaleInfo();
-      const resp=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdfBase64:b64,scale:scaleInfo.scale,drawingType:scaleInfo.type,workType:scaleInfo.workType})});
+      const blobUrl=await uploadViaBlob(files[i]);
+      const resp=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({blobUrl,scale:scaleInfo.scale,drawingType:scaleInfo.type,workType:scaleInfo.workType})});
       setStep(2,'done');setStep(3,'active');
       const rawText=await resp.text();
       const data=JSON.parse(rawText);
@@ -1870,6 +1871,23 @@ async function handleFiles(e){
     r.readAsDataURL(file);
   });
 }
+let _vercelBlobUploadFn=null;
+async function uploadViaBlob(file){
+  // Uploads straight from the browser to Vercel Blob storage, bypassing
+  // Vercel's 4.5MB serverless request-body limit that large drawing PDFs
+  // can exceed. /api/upload hands out a short-lived upload token; the file
+  // never passes through our own server at all.
+  if(!_vercelBlobUploadFn){
+    const mod=await import('https://esm.sh/@vercel/blob@2.8.0/client');
+    _vercelBlobUploadFn=mod.upload;
+  }
+  const blob=await _vercelBlobUploadFn(file.name,file,{
+    access:'private',
+    handleUploadUrl:'/api/upload',
+    contentType:'application/pdf'
+  });
+  return blob.url;
+}
 function setStep(n,s){
   const el=document.getElementById('s'+n);
   if(!el)return;
@@ -1894,15 +1912,16 @@ async function processFile(file){
   [1,2,3,4,5].forEach(n=>setStep(n,''));
   try{
     setStep(1,'active');
-    const b64=await toB64(file);
-    if(!b64.startsWith('JVBERi'))throw new Error('Not a valid PDF file.');
+    const head=await file.slice(0,5).text();
+    if(head!=='%PDF-')throw new Error('Not a valid PDF file.');
     setStep(1,'done');
     setStep(2,'active');
     const scaleInfo=getScaleInfo();
+    const blobUrl=await uploadViaBlob(file);
     const resp=await fetch('/api/analyse',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({pdfBase64:b64,scale:scaleInfo.scale,drawingType:scaleInfo.type,workType:scaleInfo.workType})
+      body:JSON.stringify({blobUrl,scale:scaleInfo.scale,drawingType:scaleInfo.type,workType:scaleInfo.workType})
     });
     setStep(2,'done');
     setStep(3,'active');
